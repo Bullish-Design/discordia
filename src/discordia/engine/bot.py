@@ -91,12 +91,12 @@ class Bot:
 
         @listen()
         async def on_ready(event: Ready) -> None:
-            logger.info("Received on_ready event")
+            #logger.info("Received on_ready event")
             await self._on_ready(event)
 
         @listen()
         async def on_message_create(event: MessageCreate) -> None:
-            logger.info("Received on_message_create event")
+            #logger.info("Received on_message_create event")
             await self._on_message(event)
 
         self.client.add_listener(on_ready)
@@ -134,10 +134,12 @@ class Bot:
 
     async def _on_message(self, event: MessageCreate) -> None:
         """Process message event."""
-        logger.info("    Processing message event...")
+        #logger.info("    Processing message event...")
         try:
             message = event.message
+            logger.info(f"Received message from {message.author.username}: {message.content}\n")
             if message.author.bot:
+                logger.info(f"    Ignoring bot message from {message.author.username}")
                 return
 
             user = User(
