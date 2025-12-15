@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger("discordia.handlers.weekday")
 
 # Pattern matches WW-DD format (01-99 week, 01-07 day)
-WEEKDAY_PATTERN = re.compile(r"^\d{2}-0[1-7]$")
+WEEKDAY_PATTERN = re.compile(r"^\d{2}-\d{2}-0[1-7]$")
 
 
 class WeekDayHandler:
