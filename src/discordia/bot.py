@@ -192,7 +192,7 @@ class Bot:
 
         except CategoryNotFoundError:
             logger.error(
-                "Log category '%s' not found. Please create it manually.",
+                "Log category '%s' not found. Please create it manually in Discord.",
                 self.settings.log_category_name,
             )
         except Exception as e:
@@ -217,6 +217,8 @@ class Bot:
 
         if self.settings.auto_create_daily_logs:
             await self._ensure_daily_log_channel()
+
+        logger.info("Bot ready and operational")
 
     async def _on_message(self, event: MessageCreate) -> None:
         """Process new message event.
