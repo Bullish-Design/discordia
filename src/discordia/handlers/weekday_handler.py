@@ -26,8 +26,8 @@ class WeekDayHandler:
     def __init__(
         self,
         api_key: SecretStr,
-        provider: str = "anthropic",
-        model: str = "claude-sonnet-4-20250514",
+        provider: str = "openai",
+        model: str = "gpt-5-nano",
         temperature: float = 0.7,
     ) -> None:
         self.config = LLMConfig(provider=provider, model=model, temperature=temperature)
