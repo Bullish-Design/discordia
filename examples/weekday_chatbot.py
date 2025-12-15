@@ -37,7 +37,7 @@ def create_weekday_template() -> ServerTemplate:
     """Create template with today's WW-DD channel."""
     today = date.today()
     iso_cal = today.isocalendar()
-    channel_name = f"{iso_cal.week:02d}-{iso_cal.weekday:02d}"
+    channel_name = f"{iso_cal.year:02d}-{iso_cal.week:02d}-{iso_cal.weekday:02d}"
 
     return ServerTemplate(
         categories=[
@@ -47,7 +47,7 @@ def create_weekday_template() -> ServerTemplate:
                 channels=[
                     TextChannelTemplate(
                         name=channel_name,
-                        topic=f"Week {iso_cal.week}, Day {iso_cal.weekday} (Monday=01)",
+                        topic=f"Week {iso_cal.week}, Day {iso_cal.weekday}",
                         position=0,
                     )
                 ],
@@ -81,6 +81,8 @@ def main() -> None:
     iso_cal = today.isocalendar()
     logger.info("Starting chatbot for channel: %02d-%02d", iso_cal.week, iso_cal.weekday)
     bot.run()
+    # Add after bot.run() starts
+    logger.info("Bot guilds: %s", [g.id for g in bot.client.guilds])
 
 
 if __name__ == "__main__":
