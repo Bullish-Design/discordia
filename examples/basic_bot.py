@@ -2,7 +2,7 @@
 # /// script
 # requires-python = ">=3.12"
 # dependencies = [
-#     "discordia",
+#     "discordia @ git+https://github.com/Bullish-Design/discordia.git@v3",
 # ]
 # ///
 # examples/basic_bot.py
