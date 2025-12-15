@@ -205,20 +205,38 @@ class Bot:
             event: Ready event from Discord
         """
 
-        logger.info("Bot ready as %s", event.user.username)
-        logger.info("Connected to %s guilds", len(event.guilds))
+        try:
+            logger.info("Bot ready as %s", event.user.username)
+            logger.info("Connected to %s guilds", len(event.guilds))
 
-        await self.db.initialize()
-        logger.info("Database initialized")
+            try:
+                await self.db.initialize()
+                logger.info("Database initialized")
+            except Exception as e:
+                logger.error("Database initialization failed: %s", e, exc_info=True)
 
-        guild = await self.client.fetch_guild(self.settings.server_id)
-        await self.category_manager.discover_categories(guild)
-        await self.channel_manager.discover_channels(guild)
+            try:
+                guild = await self.client.fetch_guild(self.settings.server_id)
+            except Exception as e:
+                logger.error("Failed to fetch guild %s: %s", self.settings.server_id, e, exc_info=True)
+                return
 
-        if self.settings.auto_create_daily_logs:
-            await self._ensure_daily_log_channel()
+            try:
+                await self.category_manager.discover_categories(guild)
+            except Exception as e:
+                logger.error("Category discovery failed: %s", e, exc_info=True)
 
-        logger.info("Bot ready and operational")
+            try:
+                await self.channel_manager.discover_channels(guild)
+            except Exception as e:
+                logger.error("Channel discovery failed: %s", e, exc_info=True)
+
+            if self.settings.auto_create_daily_logs:
+                await self._ensure_daily_log_channel()
+
+            logger.info("Bot ready and operational")
+        except Exception as e:
+            logger.error("Unhandled error in on_ready: %s", e, exc_info=True)
 
     async def _on_message(self, event: MessageCreate) -> None:
         """Process new message event.
@@ -227,24 +245,34 @@ class Bot:
             event: MessageCreate event from Discord
         """
 
-        message: Message = event.message
+        try:
+            message: Message = event.message
 
-        # Ignore bot's own messages
-        if message.author.bot:
-            return
+            # Ignore bot's own messages
+            if message.author.bot:
+                return
 
-        # Check for daily channel before processing first message of each day
-        if self.settings.auto_create_daily_logs:
-            await self._ensure_daily_log_channel()
+            # Check for daily channel before processing first message of each day
+            if self.settings.auto_create_daily_logs:
+                try:
+                    await self._ensure_daily_log_channel()
+                except Exception as e:
+                    logger.error("Daily log channel check failed: %s", e, exc_info=True)
 
-        logger.debug(
-            "Message received: %s from %s in channel %s",
-            message.id,
-            message.author.username,
-            message.channel.id,
-        )
+            logger.debug(
+                "Message received: %s from %s in channel %s",
+                message.id,
+                message.author.username,
+                message.channel.id,
+            )
 
-        await self.message_handler.handle_message(message)
+            try:
+                await self.message_handler.handle_message(message)
+            except Exception as e:
+                # MessageHandler should be resilient, but never let exceptions escape to the gateway.
+                logger.error("Unhandled error processing message %s: %s", message.id, e, exc_info=True)
+        except Exception as e:
+            logger.error("Unhandled error in on_message handler: %s", e, exc_info=True)
 
     def run(self) -> None:
         """Start the bot.

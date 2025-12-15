@@ -4,7 +4,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
-from discordia.exceptions import CategoryNotFoundError, DiscordAPIError
+from discordia.exceptions import CategoryNotFoundError, DatabaseError, DiscordAPIError, JSONLError
 from discordia.models.category import DiscordCategory
 
 if TYPE_CHECKING:
@@ -69,6 +69,7 @@ class CategoryManager:
             return categories
 
         except Exception as e:
+            logger.error("Failed to discover categories: %s", e, exc_info=True)
             raise DiscordAPIError("Failed to discover categories", cause=e) from e
 
     async def save_category(self, category: DiscordCategory) -> None:
@@ -78,8 +79,26 @@ class CategoryManager:
             category: Category to save
         """
 
-        await self.db.save_category(category)
-        await self.jsonl.write_category(category)
+        try:
+            await self.db.save_category(category)
+        except DatabaseError as e:
+            logger.error(
+                "Failed to persist category %s to database: %s",
+                category.id,
+                e,
+                exc_info=True,
+            )
+
+        try:
+            await self.jsonl.write_category(category)
+        except JSONLError as e:
+            logger.error(
+                "Failed to persist category %s to JSONL: %s",
+                category.id,
+                e,
+                exc_info=True,
+            )
+
         logger.debug("Saved category: %s (ID: %s)", category.name, category.id)
 
     async def get_category_by_name(self, name: str) -> DiscordCategory:
@@ -95,7 +114,11 @@ class CategoryManager:
             CategoryNotFoundError: If category not found
         """
 
-        category = await self.db.get_category_by_name(name, self.server_id)
+        try:
+            category = await self.db.get_category_by_name(name, self.server_id)
+        except Exception as e:
+            logger.error("Failed to get category by name '%s': %s", name, e, exc_info=True)
+            raise DiscordAPIError("Failed to get category", cause=e) from e
         if category is None:
             raise CategoryNotFoundError(f"Category '{name}' not found in server {self.server_id}")
         return category
@@ -113,7 +136,11 @@ class CategoryManager:
             CategoryNotFoundError: If category not found
         """
 
-        category = await self.db.get_category(category_id)
+        try:
+            category = await self.db.get_category(category_id)
+        except Exception as e:
+            logger.error("Failed to get category %s: %s", category_id, e, exc_info=True)
+            raise DiscordAPIError("Failed to get category", cause=e) from e
         if category is None:
             raise CategoryNotFoundError(f"Category {category_id} not found")
         return category

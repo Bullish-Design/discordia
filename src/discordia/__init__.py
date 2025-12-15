@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from discordia.bot import Bot, setup_logging
+from discordia.health import health_check
 from discordia.exceptions import (
     CategoryNotFoundError,
     ChannelNotFoundError,
@@ -38,4 +39,5 @@ __all__ = [
     "ValidationError",
     "Settings",
     "setup_logging",
+    "health_check",
 ]

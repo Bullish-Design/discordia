@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import json
 from typing import Any
 from pydantic import BaseModel
@@ -11,6 +12,8 @@ from discordia.models.category import DiscordCategory
 from discordia.models.channel import DiscordTextChannel
 from discordia.models.message import DiscordMessage
 from discordia.models.user import DiscordUser
+
+logger = logging.getLogger("discordia.jsonl")
 
 
 class JSONLWriter:
@@ -50,7 +53,9 @@ class JSONLWriter:
             line = json.dumps(entry, separators=(",", ":"), ensure_ascii=False)
 
             await asyncio.to_thread(_append_line, self.filepath, line)
+            logger.debug("Appended %s entry to JSONL", entity_type)
         except Exception as e:
+            logger.error("Failed to write %s to JSONL: %s", entity_type, e, exc_info=True)
             raise JSONLError(f"Failed to write {entity_type} to JSONL", cause=e) from e
 
     async def write_category(self, category: DiscordCategory) -> None:
@@ -84,10 +89,13 @@ class JSONLWriter:
         """
 
         try:
-            return await asyncio.to_thread(_read_all_lines, self.filepath)
+            entries = await asyncio.to_thread(_read_all_lines, self.filepath)
+            logger.debug("Read %s JSONL entries", len(entries))
+            return entries
         except FileNotFoundError:
             return []
         except Exception as e:
+            logger.error("Failed to read JSONL file: %s", e, exc_info=True)
             raise JSONLError("Failed to read JSONL file", cause=e) from e
 
 

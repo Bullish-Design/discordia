@@ -108,6 +108,21 @@ class LLMClient:
             return "No context available to respond to."
 
         system = system_prompt or "You are a helpful Discord bot assistant."
+        total_chars = sum(len(msg.content) for msg in context_messages)
+        if len(context_messages) >= 50 or total_chars >= 16_000:
+            logger.warning(
+                "Context approaching limits (messages=%s chars=%s)",
+                len(context_messages),
+                total_chars,
+            )
+
+        logger.debug(
+            "LLM request (model=%s messages=%s chars=%s system=%r)",
+            self.model,
+            len(context_messages),
+            total_chars,
+            (system[:120] + "...") if len(system) > 120 else system,
+        )
         formatted = self._format_messages_for_llm(context_messages)
 
         try:
@@ -117,11 +132,13 @@ class LLMClient:
                 max_tokens=max_tokens,
             )
             text = self._extract_text(response)
+            logger.debug("LLM response preview: %r", (text[:200] + "...") if len(text) > 200 else text)
             logger.info("Generated response (%s chars)", len(text))
             return text
         except (ContextTooLargeError, LLMAPIError):
             raise
         except Exception as e:
+            logger.error("LLM provider call failed: %s", e, exc_info=True)
             error_msg = str(e).lower()
             if any(term in error_msg for term in ("context", "token", "length", "too long")):
                 raise ContextTooLargeError(

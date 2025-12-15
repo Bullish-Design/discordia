@@ -6,7 +6,7 @@ import re
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from discordia.exceptions import ChannelNotFoundError, DiscordAPIError
+from discordia.exceptions import ChannelNotFoundError, DatabaseError, DiscordAPIError, JSONLError
 from discordia.models.channel import DiscordTextChannel
 
 if TYPE_CHECKING:
@@ -75,6 +75,7 @@ class ChannelManager:
             return channels
 
         except Exception as e:
+            logger.error("Failed to discover channels: %s", e, exc_info=True)
             raise DiscordAPIError("Failed to discover channels", cause=e) from e
 
     async def save_channel(self, channel: DiscordTextChannel) -> None:
@@ -84,8 +85,25 @@ class ChannelManager:
             channel: Channel to save
         """
 
-        await self.db.save_channel(channel)
-        await self.jsonl.write_channel(channel)
+        try:
+            await self.db.save_channel(channel)
+        except DatabaseError as e:
+            logger.error(
+                "Failed to persist channel %s to database: %s",
+                channel.id,
+                e,
+                exc_info=True,
+            )
+
+        try:
+            await self.jsonl.write_channel(channel)
+        except JSONLError as e:
+            logger.error(
+                "Failed to persist channel %s to JSONL: %s",
+                channel.id,
+                e,
+                exc_info=True,
+            )
         logger.debug("Saved channel: %s (ID: %s)", channel.name, channel.id)
 
     async def get_channel(self, channel_id: int) -> DiscordTextChannel:
@@ -101,7 +119,11 @@ class ChannelManager:
             ChannelNotFoundError: If not found
         """
 
-        channel = await self.db.get_channel(channel_id)
+        try:
+            channel = await self.db.get_channel(channel_id)
+        except Exception as e:
+            logger.error("Failed to get channel %s: %s", channel_id, e, exc_info=True)
+            raise DiscordAPIError("Failed to get channel", cause=e) from e
         if channel is None:
             raise ChannelNotFoundError(f"Channel {channel_id} not found")
         return channel
@@ -134,6 +156,7 @@ class ChannelManager:
             logger.info("Created channel: %s (ID: %s)", name, channel.id)
             return channel
         except Exception as e:
+            logger.error("Failed to create channel '%s': %s", name, e, exc_info=True)
             raise DiscordAPIError(f"Failed to create channel: {name}", cause=e) from e
 
     def is_log_channel(self, channel_name: str) -> bool:
@@ -161,10 +184,14 @@ class ChannelManager:
         """
 
         channel_name = self.get_daily_channel_name()
-        channel = await self.db.get_channel_by_name(channel_name, self.server_id)
+        try:
+            channel = await self.db.get_channel_by_name(channel_name, self.server_id)
+        except Exception as e:
+            logger.error("Failed to lookup daily log channel '%s': %s", channel_name, e, exc_info=True)
+            channel = None
         if channel is not None:
             logger.debug("Daily log channel exists: %s", channel_name)
             return channel
 
-        logger.info("Creating daily log channel: %s", channel_name)
+        logger.warning("Daily log channel missing, creating: %s", channel_name)
         return await self.create_channel(guild=guild, name=channel_name, category_id=log_category_id)
