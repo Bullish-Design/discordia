@@ -2,14 +2,34 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 
 import pytest
 from pydantic import ValidationError
+from sqlalchemy import event, inspect
+from sqlalchemy.engine import Engine
+from sqlalchemy.exc import IntegrityError
+from sqlmodel import Session, SQLModel, create_engine
 
 from discordia.models.category import DiscordCategory
 from discordia.models.channel import DiscordTextChannel
 from discordia.models.message import DiscordMessage
 from discordia.models.user import DiscordUser
+
+
+def _create_sqlite_engine() -> Engine:
+    """Create an in-memory SQLite engine with foreign keys enabled."""
+
+    engine = create_engine("sqlite:///:memory:")
+
+    # Ensure foreign key enforcement is enabled for SQLite.
+    @event.listens_for(engine, "connect")
+    def _set_sqlite_pragma(dbapi_connection: Any, _connection_record: Any) -> None:
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
+    return engine
 
 
 class TestDiscordCategory:
@@ -203,3 +223,92 @@ class TestDiscordUser:
         assert data["discriminator"] == "0"
         assert data["bot"] is False
         assert isinstance(data["created_at"], str)
+
+
+class TestSQLModelIntegration:
+    """Tests that SQLModel table configuration works and preserves validation."""
+
+    def test_create_tables(self) -> None:
+        """SQLModel can create tables from models."""
+        engine = _create_sqlite_engine()
+        SQLModel.metadata.create_all(engine)
+
+        tables = SQLModel.metadata.tables
+        assert "categories" in tables
+        assert "text_channels" in tables
+        assert "messages" in tables
+        assert "users" in tables
+
+    def test_save_and_retrieve_category(self) -> None:
+        """Category can be saved to database and retrieved."""
+        engine = _create_sqlite_engine()
+        SQLModel.metadata.create_all(engine)
+
+        category = DiscordCategory(id=123, name="Test", server_id=456)
+
+        with Session(engine) as session:
+            session.add(category)
+            session.commit()
+
+        with Session(engine) as session:
+            retrieved = session.get(DiscordCategory, 123)
+            assert retrieved is not None
+            assert retrieved.name == "Test"
+            assert retrieved.server_id == 456
+
+    def test_foreign_key_relationships(self) -> None:
+        """Foreign keys support references between tables."""
+        engine = _create_sqlite_engine()
+        SQLModel.metadata.create_all(engine)
+
+        category = DiscordCategory(id=100, name="Cat", server_id=200)
+        channel = DiscordTextChannel(id=300, name="test-channel", category_id=100, server_id=200)
+
+        with Session(engine) as session:
+            session.add(category)
+            session.add(channel)
+            session.commit()
+
+            retrieved_channel = session.get(DiscordTextChannel, 300)
+            assert retrieved_channel is not None
+            assert retrieved_channel.category_id == 100
+
+    def test_foreign_key_enforcement(self) -> None:
+        """Foreign keys prevent inserting rows with missing references."""
+        engine = _create_sqlite_engine()
+        SQLModel.metadata.create_all(engine)
+
+        # Channel references missing category
+        channel = DiscordTextChannel(id=1, name="test-channel", category_id=999, server_id=200)
+
+        with Session(engine) as session:
+            session.add(channel)
+            with pytest.raises(IntegrityError):
+                session.commit()
+
+    def test_indexes_exist(self) -> None:
+        """Models declare indexes on commonly queried fields."""
+        engine = _create_sqlite_engine()
+        SQLModel.metadata.create_all(engine)
+
+        inspector = inspect(engine)
+
+        category_indexes = inspector.get_indexes("categories")
+        category_cols = {col for idx in category_indexes for col in idx.get("column_names", [])}
+        assert "name" in category_cols
+        assert "server_id" in category_cols
+
+        channel_indexes = inspector.get_indexes("text_channels")
+        channel_cols = {col for idx in channel_indexes for col in idx.get("column_names", [])}
+        assert "name" in channel_cols
+        assert "server_id" in channel_cols
+
+        message_indexes = inspector.get_indexes("messages")
+        message_cols = {col for idx in message_indexes for col in idx.get("column_names", [])}
+        assert "channel_id" in message_cols
+        assert "timestamp" in message_cols
+        assert "author_id" in message_cols
+
+        user_indexes = inspector.get_indexes("users")
+        user_cols = {col for idx in user_indexes for col in idx.get("column_names", [])}
+        assert "username" in user_cols

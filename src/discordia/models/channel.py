@@ -5,10 +5,13 @@ import re
 from datetime import datetime
 from typing import ClassVar
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import ConfigDict, field_validator
+from sqlmodel import Field
+
+from discordia.models.base import ValidatedSQLModel
 
 
-class DiscordTextChannel(BaseModel):
+class DiscordTextChannel(ValidatedSQLModel, table=True):
     """Represents a Discord text channel.
 
     Text channels contain messages and may optionally belong to a parent category.
@@ -16,12 +19,18 @@ class DiscordTextChannel(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
+    __tablename__ = "text_channels"
+
     _NAME_PATTERN: ClassVar[re.Pattern[str]] = re.compile(r"^[a-z0-9-]{1,100}$")
 
-    id: int = Field(..., description="Discord channel ID")
-    name: str = Field(..., max_length=100, description="Channel name")
-    category_id: int | None = Field(default=None, description="Parent category ID (None if uncategorized)")
-    server_id: int = Field(..., description="Discord server (guild) ID")
+    id: int = Field(primary_key=True, description="Discord channel ID")
+    name: str = Field(max_length=100, index=True, description="Channel name")
+    category_id: int | None = Field(
+        default=None,
+        foreign_key="categories.id",
+        description="Parent category ID (None if uncategorized)",
+    )
+    server_id: int = Field(index=True, description="Discord server (guild) ID")
     position: int = Field(default=0, description="Display position in channel list")
     created_at: datetime = Field(default_factory=datetime.utcnow, description="When channel was created")
 

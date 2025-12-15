@@ -3,10 +3,13 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import ConfigDict, field_validator
+from sqlmodel import Field
+
+from discordia.models.base import ValidatedSQLModel
 
 
-class DiscordMessage(BaseModel):
+class DiscordMessage(ValidatedSQLModel, table=True):
     """Represents a Discord message.
 
     Messages are posted by users in channels and may be edited after creation.
@@ -14,11 +17,21 @@ class DiscordMessage(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    id: int = Field(..., description="Discord message ID")
-    content: str = Field(..., max_length=2000, description="Message content")
-    author_id: int = Field(..., description="ID of the user who sent the message")
-    channel_id: int = Field(..., description="ID of the channel containing the message")
-    timestamp: datetime = Field(..., description="When the message was sent")
+    __tablename__ = "messages"
+
+    id: int = Field(primary_key=True, description="Discord message ID")
+    content: str = Field(max_length=2000, description="Message content")
+    author_id: int = Field(
+        foreign_key="users.id",
+        index=True,
+        description="ID of the user who sent the message",
+    )
+    channel_id: int = Field(
+        foreign_key="text_channels.id",
+        index=True,
+        description="ID of the channel containing the message",
+    )
+    timestamp: datetime = Field(index=True, description="When the message was sent")
     edited_at: datetime | None = Field(default=None, description="When the message was last edited")
 
     @field_validator("id", "author_id", "channel_id")

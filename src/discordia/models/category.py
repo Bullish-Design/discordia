@@ -3,10 +3,13 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import ConfigDict, field_validator
+from sqlmodel import Field
+
+from discordia.models.base import ValidatedSQLModel
 
 
-class DiscordCategory(BaseModel):
+class DiscordCategory(ValidatedSQLModel, table=True):
     """Represents a Discord channel category.
 
     Categories group related channels together in Discord servers.
@@ -14,9 +17,11 @@ class DiscordCategory(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    id: int = Field(..., description="Discord category ID")
-    name: str = Field(..., max_length=100, description="Category name")
-    server_id: int = Field(..., description="Discord server (guild) ID")
+    __tablename__ = "categories"
+
+    id: int = Field(primary_key=True, description="Discord category ID")
+    name: str = Field(max_length=100, index=True, description="Category name")
+    server_id: int = Field(index=True, description="Discord server (guild) ID")
     position: int = Field(default=0, description="Display position in channel list")
     created_at: datetime = Field(default_factory=datetime.utcnow, description="When category was created")
 

@@ -3,10 +3,13 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import ConfigDict, field_validator
+from sqlmodel import Field
+
+from discordia.models.base import ValidatedSQLModel
 
 
-class DiscordUser(BaseModel):
+class DiscordUser(ValidatedSQLModel, table=True):
     """Represents a Discord user.
 
     Users may be humans or bots. Discord now defaults the discriminator to "0".
@@ -14,8 +17,10 @@ class DiscordUser(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    id: int = Field(..., description="Discord user ID")
-    username: str = Field(..., max_length=32, description="Discord username")
+    __tablename__ = "users"
+
+    id: int = Field(primary_key=True, description="Discord user ID")
+    username: str = Field(max_length=32, index=True, description="Discord username")
     discriminator: str = Field(default="0", description="Legacy discriminator (usually '0')")
     bot: bool = Field(default=False, description="Whether the user is a bot")
     created_at: datetime = Field(default_factory=datetime.utcnow, description="When the user account was created")
