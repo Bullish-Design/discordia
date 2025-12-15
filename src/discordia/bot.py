@@ -7,8 +7,10 @@ from typing import TYPE_CHECKING
 from interactions import Client, Intents, listen
 from interactions.api.events import MessageCreate, Ready
 
+from discordia.llm.client import LLMClient
 from discordia.managers.category_manager import CategoryManager
 from discordia.managers.channel_manager import ChannelManager
+from discordia.managers.message_handler import MessageHandler
 from discordia.persistence.database import DatabaseWriter
 from discordia.persistence.jsonl import JSONLWriter
 from discordia.settings import Settings
@@ -52,6 +54,12 @@ class Bot:
         self.db = DatabaseWriter(settings.database_url)
         self.jsonl = JSONLWriter(settings.jsonl_path)
 
+        # Initialize LLM client
+        self.llm_client = LLMClient(
+            api_key=settings.anthropic_api_key,
+            model=settings.llm_model,
+        )
+
         # Initialize managers
         self.category_manager = CategoryManager(
             db=self.db,
@@ -63,6 +71,15 @@ class Bot:
             db=self.db,
             jsonl=self.jsonl,
             server_id=settings.server_id,
+        )
+
+        self.message_handler = MessageHandler(
+            db=self.db,
+            jsonl=self.jsonl,
+            llm_client=self.llm_client,
+            channel_manager=self.channel_manager,
+            context_limit=settings.message_context_limit,
+            max_message_length=settings.max_message_length,
         )
 
         # Create Discord client
@@ -135,7 +152,7 @@ class Bot:
             message.channel.id,
         )
 
-        # TODO: Message handling will be implemented in later steps
+        await self.message_handler.handle_message(message)
 
     def run(self) -> None:
         """Start the bot.

@@ -1,6 +1,7 @@
 # tests/test_managers.py
 from __future__ import annotations
 
+from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -8,8 +9,10 @@ import pytest
 from discordia.exceptions import CategoryNotFoundError, ChannelNotFoundError
 from discordia.managers.category_manager import CategoryManager
 from discordia.managers.channel_manager import ChannelManager
+from discordia.managers.message_handler import MessageHandler
 from discordia.models.category import DiscordCategory
 from discordia.models.channel import DiscordTextChannel
+from discordia.models.message import DiscordMessage
 
 
 @pytest.fixture
@@ -19,10 +22,14 @@ def mock_db() -> MagicMock:
     db = MagicMock()
     db.save_category = AsyncMock()
     db.save_channel = AsyncMock()
+    db.save_user = AsyncMock()
+    db.save_message = AsyncMock()
+
     db.get_category = AsyncMock()
     db.get_category_by_name = AsyncMock()
     db.get_channel = AsyncMock()
     db.get_channel_by_name = AsyncMock()
+    db.get_messages = AsyncMock(return_value=[])
     return db
 
 
@@ -33,7 +40,18 @@ def mock_jsonl() -> MagicMock:
     jsonl = MagicMock()
     jsonl.write_category = AsyncMock()
     jsonl.write_channel = AsyncMock()
+    jsonl.write_user = AsyncMock()
+    jsonl.write_message = AsyncMock()
     return jsonl
+
+
+@pytest.fixture
+def mock_llm() -> MagicMock:
+    """Mock LLM client."""
+
+    llm = MagicMock()
+    llm.generate_response = AsyncMock(return_value="Test response")
+    return llm
 
 
 @pytest.fixture
@@ -48,6 +66,25 @@ def channel_manager(mock_db: MagicMock, mock_jsonl: MagicMock) -> ChannelManager
     """Create ChannelManager for testing."""
 
     return ChannelManager(db=mock_db, jsonl=mock_jsonl, server_id=123456789)
+
+
+@pytest.fixture
+def message_handler(
+    mock_db: MagicMock,
+    mock_jsonl: MagicMock,
+    mock_llm: MagicMock,
+    channel_manager: ChannelManager,
+) -> MessageHandler:
+    """Create MessageHandler for testing."""
+
+    return MessageHandler(
+        db=mock_db,
+        jsonl=mock_jsonl,
+        llm_client=mock_llm,
+        channel_manager=channel_manager,
+        context_limit=20,
+        max_message_length=2000,
+    )
 
 
 @pytest.mark.asyncio
@@ -227,3 +264,178 @@ async def test_ensure_daily_log_channel_creates_new(channel_manager: ChannelMana
     assert result.name == "2024-12-14"
     assert result.category_id == 100
     mock_guild.create_text_channel.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_save_user(message_handler: MessageHandler, mock_db: MagicMock, mock_jsonl: MagicMock) -> None:
+    """save_user persists user to DB and JSONL."""
+
+    mock_author = MagicMock()
+    mock_author.id = 123
+    mock_author.username = "testuser"
+    mock_author.bot = False
+
+    user = await message_handler.save_user(mock_author)
+
+    assert user.id == 123
+    assert user.username == "testuser"
+
+    mock_db.save_user.assert_called_once()
+    mock_jsonl.write_user.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_save_message(message_handler: MessageHandler, mock_db: MagicMock, mock_jsonl: MagicMock) -> None:
+    """save_message persists message to DB and JSONL."""
+
+    now = datetime.utcnow()
+
+    mock_msg = MagicMock()
+    mock_msg.id = 456
+    mock_msg.content = "Test content"
+    mock_msg.author.id = 123
+    mock_msg.channel.id = 789
+    mock_msg.timestamp = now
+    mock_msg.edited_timestamp = None
+
+    message = await message_handler.save_message(mock_msg)
+
+    assert message.id == 456
+    assert message.content == "Test content"
+    assert message.timestamp == now
+
+    mock_db.save_message.assert_called()
+    mock_jsonl.write_message.assert_called()
+
+
+@pytest.mark.asyncio
+async def test_get_context_messages(message_handler: MessageHandler, mock_db: MagicMock) -> None:
+    """get_context_messages loads from database."""
+
+    expected = [
+        DiscordMessage(
+            id=1,
+            content="First",
+            author_id=10,
+            channel_id=20,
+            timestamp=datetime.utcnow(),
+        ),
+        DiscordMessage(
+            id=2,
+            content="Second",
+            author_id=10,
+            channel_id=20,
+            timestamp=datetime.utcnow(),
+        ),
+    ]
+    mock_db.get_messages.return_value = expected
+
+    result = await message_handler.get_context_messages(20)
+
+    assert len(result) == 2
+    mock_db.get_messages.assert_called_once_with(channel_id=20, limit=20)
+
+
+def test_split_message_short(message_handler: MessageHandler) -> None:
+    """split_message returns single chunk for short text."""
+
+    text = "Short message"
+    result = message_handler.split_message(text)
+
+    assert result == [text]
+
+
+def test_split_message_long(message_handler: MessageHandler) -> None:
+    """split_message splits long text into chunks."""
+
+    text = ("Line\n" * 500).strip()
+    result = message_handler.split_message(text)
+
+    assert len(result) > 1
+    for chunk in result:
+        assert len(chunk) <= 2000
+
+
+@pytest.mark.asyncio
+async def test_handle_message_ignores_bot(message_handler: MessageHandler) -> None:
+    """handle_message ignores bot messages."""
+
+    mock_msg = MagicMock()
+    mock_msg.author.bot = True
+
+    await message_handler.handle_message(mock_msg)
+
+    message_handler.db.save_user.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_handle_message_in_log_channel(message_handler: MessageHandler, mock_llm: MagicMock) -> None:
+    """handle_message processes messages in log channels."""
+
+    mock_msg = MagicMock()
+    mock_msg.author.bot = False
+    mock_msg.author.id = 100
+    mock_msg.author.username = "user"
+    mock_msg.author.bot = False
+    mock_msg.id = 200
+    mock_msg.content = "Hello"
+    mock_msg.channel.id = 300
+    mock_msg.timestamp = datetime.utcnow()
+    mock_msg.edited_timestamp = None
+
+    mock_channel = MagicMock()
+    mock_channel.name = "2024-12-14"
+    mock_msg.channel.fetch = AsyncMock(return_value=mock_channel)
+
+    mock_reply = MagicMock()
+    mock_reply.id = 400
+    mock_reply.author.id = 500
+    mock_reply.author.bot = True
+    mock_reply.timestamp = datetime.utcnow()
+
+    mock_msg.reply = AsyncMock(return_value=mock_reply)
+
+    message_handler.channel_manager.is_log_channel = MagicMock(return_value=True)
+    message_handler.db.get_messages = AsyncMock(
+        return_value=[
+            DiscordMessage(
+                id=1,
+                content="Previous",
+                author_id=100,
+                channel_id=300,
+                timestamp=datetime.utcnow(),
+            )
+        ]
+    )
+
+    await message_handler.handle_message(mock_msg)
+
+    mock_llm.generate_response.assert_called_once()
+    assert mock_msg.reply.call_count == 1
+    assert message_handler.db.save_message.call_count >= 2
+
+
+@pytest.mark.asyncio
+async def test_handle_message_not_log_channel(message_handler: MessageHandler) -> None:
+    """handle_message skips non-log channels."""
+
+    mock_msg = MagicMock()
+    mock_msg.author.bot = False
+    mock_msg.author.id = 100
+    mock_msg.author.username = "user"
+    mock_msg.author.bot = False
+    mock_msg.id = 200
+    mock_msg.content = "Hello"
+    mock_msg.channel.id = 300
+    mock_msg.timestamp = datetime.utcnow()
+    mock_msg.edited_timestamp = None
+
+    mock_channel = MagicMock()
+    mock_channel.name = "general"
+    mock_msg.channel.fetch = AsyncMock(return_value=mock_channel)
+
+    message_handler.channel_manager.is_log_channel = MagicMock(return_value=False)
+
+    await message_handler.handle_message(mock_msg)
+
+    message_handler.llm_client.generate_response.assert_not_called()

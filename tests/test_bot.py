@@ -39,8 +39,10 @@ def test_bot_initialization(mock_settings: Settings) -> None:
     assert bot.settings == mock_settings
     assert bot.db is not None
     assert bot.jsonl is not None
+    assert bot.llm_client is not None
     assert bot.category_manager is not None
     assert bot.channel_manager is not None
+    assert bot.message_handler is not None
     assert bot.client is not None
 
 
@@ -108,7 +110,11 @@ async def test_on_message_ignores_bot_messages(bot: Bot) -> None:
     mock_event = MagicMock()
     mock_event.message.author.bot = True
 
+    bot.message_handler.handle_message = AsyncMock()
+
     await bot._on_message(mock_event)
+
+    bot.message_handler.handle_message.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -121,7 +127,11 @@ async def test_on_message_processes_user_messages(bot: Bot) -> None:
     mock_event.message.author.username = "testuser"
     mock_event.message.channel.id = 67890
 
+    bot.message_handler.handle_message = AsyncMock()
+
     await bot._on_message(mock_event)
+
+    bot.message_handler.handle_message.assert_called_once_with(mock_event.message)
 
 
 @pytest.mark.asyncio

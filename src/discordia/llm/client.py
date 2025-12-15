@@ -105,7 +105,7 @@ class LLMClient:
 
         if not context_messages:
             logger.warning("No context messages provided")
-            return "There is no context to respond to."
+            return "No context available to respond to."
 
         system = system_prompt or "You are a helpful Discord bot assistant."
         formatted = self._format_messages_for_llm(context_messages)
