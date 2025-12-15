@@ -188,6 +188,30 @@ class DatabaseWriter:
         except Exception as e:  # pragma: no cover
             raise DatabaseError(f"Failed to retrieve channel {channel_id}", cause=e) from e
 
+    async def get_channel_by_name(self, name: str, server_id: int) -> DiscordTextChannel | None:
+        """Retrieve channel by name within a server.
+
+        Args:
+            name: Channel name
+            server_id: Server ID
+
+        Returns:
+            Channel if found, None otherwise
+        """
+
+        try:
+            async with self.get_session() as session:
+                statement = select(DiscordTextChannel).where(
+                    DiscordTextChannel.name == name,
+                    DiscordTextChannel.server_id == server_id,
+                )
+                result = await session.execute(statement)
+                return result.scalar_one_or_none()
+        except DatabaseError as e:
+            raise DatabaseError(f"Failed to retrieve channel by name: {name}", cause=e) from e
+        except Exception as e:  # pragma: no cover
+            raise DatabaseError(f"Failed to retrieve channel by name: {name}", cause=e) from e
+
     async def get_messages(self, channel_id: int, limit: int = 20) -> list[DiscordMessage]:
         """Retrieve recent messages from a channel.
 

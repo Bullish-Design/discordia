@@ -8,6 +8,7 @@ from interactions import Client, Intents, listen
 from interactions.api.events import MessageCreate, Ready
 
 from discordia.managers.category_manager import CategoryManager
+from discordia.managers.channel_manager import ChannelManager
 from discordia.persistence.database import DatabaseWriter
 from discordia.persistence.jsonl import JSONLWriter
 from discordia.settings import Settings
@@ -58,6 +59,12 @@ class Bot:
             server_id=settings.server_id,
         )
 
+        self.channel_manager = ChannelManager(
+            db=self.db,
+            jsonl=self.jsonl,
+            server_id=settings.server_id,
+        )
+
         # Create Discord client
         self.client = Client(
             token=settings.discord_token,
@@ -102,6 +109,11 @@ class Bot:
 
         guild = await self.client.fetch_guild(self.settings.server_id)
         await self.category_manager.discover_categories(guild)
+        await self.channel_manager.discover_channels(guild)
+
+        if self.settings.auto_create_daily_logs:
+            log_category = await self.category_manager.get_category_by_name(self.settings.log_category_name)
+            await self.channel_manager.ensure_daily_log_channel(guild, log_category.id)
 
     async def _on_message(self, event: MessageCreate) -> None:
         """Process new message event.

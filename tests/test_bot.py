@@ -6,6 +6,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from discordia.bot import Bot
+from discordia.models.category import DiscordCategory
+from discordia.models.channel import DiscordTextChannel
 from discordia.settings import Settings
 
 
@@ -38,6 +40,7 @@ def test_bot_initialization(mock_settings: Settings) -> None:
     assert bot.db is not None
     assert bot.jsonl is not None
     assert bot.category_manager is not None
+    assert bot.channel_manager is not None
     assert bot.client is not None
 
 
@@ -73,8 +76,16 @@ async def test_on_ready_initializes_database(bot: Bot) -> None:
     """Ready event initializes database."""
 
     bot.db.initialize = AsyncMock()
-    bot.client.fetch_guild = AsyncMock(return_value=MagicMock())
+    mock_guild = MagicMock()
+    bot.client.fetch_guild = AsyncMock(return_value=mock_guild)
     bot.category_manager.discover_categories = AsyncMock()
+    bot.channel_manager.discover_channels = AsyncMock()
+    bot.category_manager.get_category_by_name = AsyncMock(
+        return_value=DiscordCategory(id=100, name="Log", server_id=bot.settings.server_id)
+    )
+    bot.channel_manager.ensure_daily_log_channel = AsyncMock(
+        return_value=DiscordTextChannel(id=200, name="2024-12-14", category_id=100, server_id=bot.settings.server_id)
+    )
 
     mock_event = MagicMock()
     mock_event.user.username = "TestBot"
@@ -85,6 +96,9 @@ async def test_on_ready_initializes_database(bot: Bot) -> None:
     bot.db.initialize.assert_called_once()
     bot.client.fetch_guild.assert_called_once_with(bot.settings.server_id)
     bot.category_manager.discover_categories.assert_called_once()
+    bot.channel_manager.discover_channels.assert_called_once()
+    bot.category_manager.get_category_by_name.assert_called_once_with(bot.settings.log_category_name)
+    bot.channel_manager.ensure_daily_log_channel.assert_called_once_with(mock_guild, 100)
 
 
 @pytest.mark.asyncio
