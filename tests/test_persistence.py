@@ -41,6 +41,22 @@ async def test_save_and_retrieve_category(db_writer: DatabaseWriter) -> None:
 
 
 @pytest.mark.asyncio
+async def test_get_category_by_name(db_writer: DatabaseWriter) -> None:
+    """Category can be queried by name within a server."""
+
+    category = DiscordCategory(id=2, name="Log", server_id=200)
+    await db_writer.save_category(category)
+
+    found = await db_writer.get_category_by_name("Log", 200)
+    assert found is not None
+    assert found.id == 2
+    assert found.name == "Log"
+
+    missing = await db_writer.get_category_by_name("Missing", 200)
+    assert missing is None
+
+
+@pytest.mark.asyncio
 async def test_save_and_retrieve_channel(db_writer: DatabaseWriter) -> None:
     """Channel can be saved and retrieved."""
     channel = DiscordTextChannel(

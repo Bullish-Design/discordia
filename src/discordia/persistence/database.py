@@ -153,6 +153,30 @@ class DatabaseWriter:
         except Exception as e:  # pragma: no cover
             raise DatabaseError(f"Failed to retrieve category {category_id}", cause=e) from e
 
+    async def get_category_by_name(self, name: str, server_id: int) -> DiscordCategory | None:
+        """Retrieve category by name within a server.
+
+        Args:
+            name: Category name
+            server_id: Server ID to search in
+
+        Returns:
+            Category if found, None otherwise
+        """
+
+        try:
+            async with self.get_session() as session:
+                statement = select(DiscordCategory).where(
+                    DiscordCategory.name == name,
+                    DiscordCategory.server_id == server_id,
+                )
+                result = await session.execute(statement)
+                return result.scalar_one_or_none()
+        except DatabaseError as e:
+            raise DatabaseError(f"Failed to retrieve category by name: {name}", cause=e) from e
+        except Exception as e:  # pragma: no cover
+            raise DatabaseError(f"Failed to retrieve category by name: {name}", cause=e) from e
+
     async def get_channel(self, channel_id: int) -> DiscordTextChannel | None:
         """Retrieve channel by ID."""
 

@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from interactions import Client, Intents, listen
 from interactions.api.events import MessageCreate, Ready
 
+from discordia.managers.category_manager import CategoryManager
 from discordia.persistence.database import DatabaseWriter
 from discordia.persistence.jsonl import JSONLWriter
 from discordia.settings import Settings
@@ -50,6 +51,13 @@ class Bot:
         self.db = DatabaseWriter(settings.database_url)
         self.jsonl = JSONLWriter(settings.jsonl_path)
 
+        # Initialize managers
+        self.category_manager = CategoryManager(
+            db=self.db,
+            jsonl=self.jsonl,
+            server_id=settings.server_id,
+        )
+
         # Create Discord client
         self.client = Client(
             token=settings.discord_token,
@@ -91,6 +99,9 @@ class Bot:
 
         await self.db.initialize()
         logger.info("Database initialized")
+
+        guild = await self.client.fetch_guild(self.settings.server_id)
+        await self.category_manager.discover_categories(guild)
 
     async def _on_message(self, event: MessageCreate) -> None:
         """Process new message event.

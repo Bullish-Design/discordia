@@ -37,6 +37,7 @@ def test_bot_initialization(mock_settings: Settings) -> None:
     assert bot.settings == mock_settings
     assert bot.db is not None
     assert bot.jsonl is not None
+    assert bot.category_manager is not None
     assert bot.client is not None
 
 
@@ -72,6 +73,8 @@ async def test_on_ready_initializes_database(bot: Bot) -> None:
     """Ready event initializes database."""
 
     bot.db.initialize = AsyncMock()
+    bot.client.fetch_guild = AsyncMock(return_value=MagicMock())
+    bot.category_manager.discover_categories = AsyncMock()
 
     mock_event = MagicMock()
     mock_event.user.username = "TestBot"
@@ -80,6 +83,8 @@ async def test_on_ready_initializes_database(bot: Bot) -> None:
     await bot._on_ready(mock_event)
 
     bot.db.initialize.assert_called_once()
+    bot.client.fetch_guild.assert_called_once_with(bot.settings.server_id)
+    bot.category_manager.discover_categories.assert_called_once()
 
 
 @pytest.mark.asyncio
