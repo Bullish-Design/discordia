@@ -103,7 +103,7 @@ class Bot:
     async def _on_ready(self, event: Ready) -> None:
         """Process ready event."""
         try:
-            logger.info("Bot ready as %s", event.user.username)
+            logger.info("Bot ready as %s",self.client.user.username)  # event.user.username)
 
             guild = await self.client.fetch_guild(self.settings.server_id)
             await self.discovery.discover_categories(guild)
