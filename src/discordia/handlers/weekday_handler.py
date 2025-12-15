@@ -35,12 +35,19 @@ class WeekDayHandler:
 
     async def can_handle(self, ctx: MessageContext) -> bool:
         """Handle messages in WW-DD format channels."""
-        return bool(WEEKDAY_PATTERN.match(ctx.channel_name))
+
+        allowed = bool(WEEKDAY_PATTERN.match(ctx.channel_name))
+        logger.info(f"Can handle in channel '{ctx.channel_name}': {allowed}")
+        return allowed
 
     async def handle(self, ctx: MessageContext) -> str | None:
         """Generate LLM response using PyGentic."""
+        logger.info("Handling message in channel '%s'", ctx.channel_name)
         history = await ctx.get_history(limit=20)
+        logger.info("Fetched %d messages for context", len(history))
         history_text = [f"{m.author_id}: {m.content}" for m in history]
+        logger.info(f"Prepared history text with {len(history_text)} entries")
+
 
         response_model = await generate_async(
             ConversationResponse,
@@ -50,7 +57,7 @@ class WeekDayHandler:
             user_message=ctx.content,
             history=history_text,
         )
-
+        logger.info(f"Generated response model: {response_model}")
         response = await access_property_async(response_model, "response")
         logger.info("Generated response for %s (%d chars)", ctx.channel_name, len(response))
         return response
