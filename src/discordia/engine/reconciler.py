@@ -72,7 +72,7 @@ class Reconciler:
         except Exception:
             if isinstance(template, TextChannelTemplate):
                 discord_channel = await guild.create_text_channel(
-                    name=template.name, parent_id=category_id, topic=template.topic
+                    name=template.name, category=category_id, topic=template.topic
                 )
                 from discordia.state.models import Channel
 
