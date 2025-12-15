@@ -1,160 +1,174 @@
 # tests/test_persistence.py
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+import json
 
 import pytest
 
-from discordia.exceptions import DatabaseError
-from discordia.models.category import DiscordCategory
-from discordia.models.channel import DiscordTextChannel
-from discordia.models.message import DiscordMessage
-from discordia.models.user import DiscordUser
-from discordia.persistence.database import DatabaseWriter
-
-
-@pytest.fixture
-async def db_writer() -> DatabaseWriter:
-    """Create in-memory database writer for testing."""
-    writer = DatabaseWriter("sqlite+aiosqlite:///:memory:")
-    await writer.initialize()
-    yield writer
-    await writer.close()
+from discordia.exceptions import JSONLError
+from discordia.persistence.jsonl import JSONLBackend
+from discordia.persistence.memory import MemoryBackend
+from discordia.state.models import Category, User
 
 
 @pytest.mark.asyncio
-async def test_initialize_creates_tables(db_writer: DatabaseWriter) -> None:
-    """Database initialization creates all tables."""
-    assert db_writer._initialized is True
-
-
-@pytest.mark.asyncio
-async def test_save_and_retrieve_category(db_writer: DatabaseWriter) -> None:
-    """Category can be saved and retrieved."""
-    category = DiscordCategory(id=1, name="Test", server_id=100)
-    await db_writer.save_category(category)
-
-    retrieved = await db_writer.get_category(1)
-    assert retrieved is not None
-    assert retrieved.name == "Test"
-    assert retrieved.server_id == 100
-
-
-@pytest.mark.asyncio
-async def test_get_category_by_name(db_writer: DatabaseWriter) -> None:
-    """Category can be queried by name within a server."""
-
-    category = DiscordCategory(id=2, name="Log", server_id=200)
-    await db_writer.save_category(category)
-
-    found = await db_writer.get_category_by_name("Log", 200)
-    assert found is not None
-    assert found.id == 2
-    assert found.name == "Log"
-
-    missing = await db_writer.get_category_by_name("Missing", 200)
-    assert missing is None
-
-
-@pytest.mark.asyncio
-async def test_save_and_retrieve_channel(db_writer: DatabaseWriter) -> None:
-    """Channel can be saved and retrieved."""
-    channel = DiscordTextChannel(
-        id=2,
-        name="test-channel",
-        server_id=100,
-    )
-    await db_writer.save_channel(channel)
-
-    retrieved = await db_writer.get_channel(2)
-    assert retrieved is not None
-    assert retrieved.name == "test-channel"
-
-
-@pytest.mark.asyncio
-async def test_save_message(db_writer: DatabaseWriter) -> None:
-    """Message can be saved."""
-    user = DiscordUser(id=10, username="testuser")
-    await db_writer.save_user(user)
-
-    channel = DiscordTextChannel(id=20, name="test", server_id=100)
-    await db_writer.save_channel(channel)
-
-    message = DiscordMessage(
-        id=30,
-        content="Hello",
-        author_id=10,
-        channel_id=20,
-        timestamp=datetime.utcnow(),
-    )
-    await db_writer.save_message(message)
-
-    retrieved = await db_writer.get_messages(20, limit=10)
-    assert len(retrieved) == 1
-    assert retrieved[0].content == "Hello"
-
-
-@pytest.mark.asyncio
-async def test_get_messages_returns_ordered_list(db_writer: DatabaseWriter) -> None:
-    """get_messages returns messages in chronological order."""
-    user = DiscordUser(id=10, username="test")
-    await db_writer.save_user(user)
-
-    channel = DiscordTextChannel(id=20, name="test", server_id=100)
-    await db_writer.save_channel(channel)
-
-    base = datetime.utcnow()
-    msg1 = DiscordMessage(id=1, content="First", author_id=10, channel_id=20, timestamp=base)
-    msg2 = DiscordMessage(id=2, content="Second", author_id=10, channel_id=20, timestamp=base + timedelta(seconds=1))
-    msg3 = DiscordMessage(id=3, content="Third", author_id=10, channel_id=20, timestamp=base + timedelta(seconds=2))
-
-    await db_writer.save_message(msg3)
-    await db_writer.save_message(msg1)
-    await db_writer.save_message(msg2)
-
-    messages = await db_writer.get_messages(20, limit=10)
-    assert len(messages) == 3
-    assert [m.content for m in messages] == ["First", "Second", "Third"]
-
-
-@pytest.mark.asyncio
-async def test_get_messages_respects_limit(db_writer: DatabaseWriter) -> None:
-    """get_messages respects limit parameter."""
-    user = DiscordUser(id=10, username="test")
-    await db_writer.save_user(user)
-
-    channel = DiscordTextChannel(id=20, name="test", server_id=100)
-    await db_writer.save_channel(channel)
-
-    base = datetime.utcnow()
-    for i in range(10):
-        msg = DiscordMessage(
-            id=i + 1,
-            content=f"Message {i}",
-            author_id=10,
-            channel_id=20,
-            timestamp=base + timedelta(seconds=i),
-        )
-        await db_writer.save_message(msg)
-
-    messages = await db_writer.get_messages(20, limit=5)
-    assert len(messages) == 5
-    assert messages[0].content == "Message 5"
-    assert messages[-1].content == "Message 9"
-
-
-@pytest.mark.asyncio
-async def test_database_error_on_invalid_operation(db_writer: DatabaseWriter) -> None:
-    """Database errors are wrapped in DatabaseError."""
-    message = DiscordMessage(
-        id=999,
-        content="Invalid",
-        author_id=99999,
-        channel_id=88888,
-        timestamp=datetime.utcnow(),
+async def test_memory_backend_write():
+    """MemoryBackend can store entities."""
+    backend = MemoryBackend()
+    category = Category(
+        id=123456789012345678,
+        name="Test Category",
+        server_id=987654321098765432,
     )
 
-    with pytest.raises(DatabaseError) as exc_info:
-        await db_writer.save_message(message)
+    await backend.write(category, "category")
 
-    assert "Failed to save message" in str(exc_info.value)
+    entries = await backend.read_all()
+    assert len(entries) == 1
+    assert entries[0]["type"] == "category"
+    assert entries[0]["data"]["name"] == "Test Category"
+
+
+@pytest.mark.asyncio
+async def test_memory_backend_multiple_entities():
+    """MemoryBackend can store multiple entities."""
+    backend = MemoryBackend()
+
+    category = Category(
+        id=123456789012345678,
+        name="Category",
+        server_id=987654321098765432,
+    )
+    user = User(id=111222333444555666, username="TestUser")
+
+    await backend.write(category, "category")
+    await backend.write(user, "user")
+
+    entries = await backend.read_all()
+    assert len(entries) == 2
+    assert entries[0]["type"] == "category"
+    assert entries[1]["type"] == "user"
+
+
+@pytest.mark.asyncio
+async def test_memory_backend_read_all_empty():
+    """MemoryBackend returns empty list when no entries."""
+    backend = MemoryBackend()
+    entries = await backend.read_all()
+    assert entries == []
+
+
+@pytest.mark.asyncio
+async def test_jsonl_backend_write(tmp_path):
+    """JSONLBackend writes entities to file."""
+    filepath = tmp_path / "test.jsonl"
+    backend = JSONLBackend(str(filepath))
+
+    category = Category(
+        id=123456789012345678,
+        name="Test Category",
+        server_id=987654321098765432,
+    )
+    await backend.write(category, "category")
+
+    assert filepath.exists()
+    content = filepath.read_text()
+    assert "Test Category" in content
+
+
+@pytest.mark.asyncio
+async def test_jsonl_backend_read_all(tmp_path):
+    """JSONLBackend reads entities from file."""
+    filepath = tmp_path / "test.jsonl"
+    backend = JSONLBackend(str(filepath))
+
+    category = Category(
+        id=123456789012345678,
+        name="Category",
+        server_id=987654321098765432,
+    )
+    await backend.write(category, "category")
+
+    entries = await backend.read_all()
+    assert len(entries) == 1
+    assert entries[0]["type"] == "category"
+    assert entries[0]["data"]["name"] == "Category"
+
+
+@pytest.mark.asyncio
+async def test_jsonl_backend_read_nonexistent_file(tmp_path):
+    """JSONLBackend returns empty list for nonexistent file."""
+    filepath = tmp_path / "nonexistent.jsonl"
+    backend = JSONLBackend(str(filepath))
+
+    entries = await backend.read_all()
+    assert entries == []
+
+
+@pytest.mark.asyncio
+async def test_jsonl_backend_multiple_writes(tmp_path):
+    """JSONLBackend appends multiple entities."""
+    filepath = tmp_path / "test.jsonl"
+    backend = JSONLBackend(str(filepath))
+
+    category = Category(
+        id=123456789012345678,
+        name="Category",
+        server_id=987654321098765432,
+    )
+    user = User(id=111222333444555666, username="TestUser")
+
+    await backend.write(category, "category")
+    await backend.write(user, "user")
+
+    entries = await backend.read_all()
+    assert len(entries) == 2
+
+
+@pytest.mark.asyncio
+async def test_jsonl_backend_preserves_order(tmp_path):
+    """JSONLBackend preserves write order."""
+    filepath = tmp_path / "test.jsonl"
+    backend = JSONLBackend(str(filepath))
+
+    for i in range(5):
+        user = User(id=100000000000000000 + i, username=f"User{i}")
+        await backend.write(user, "user")
+
+    entries = await backend.read_all()
+    assert len(entries) == 5
+    assert entries[0]["data"]["username"] == "User0"
+    assert entries[4]["data"]["username"] == "User4"
+
+
+@pytest.mark.asyncio
+async def test_jsonl_backend_format_validation(tmp_path):
+    """JSONLBackend writes valid JSON lines."""
+    filepath = tmp_path / "test.jsonl"
+    backend = JSONLBackend(str(filepath))
+
+    category = Category(
+        id=123456789012345678,
+        name="Test",
+        server_id=987654321098765432,
+    )
+    await backend.write(category, "category")
+
+    with open(filepath) as f:
+        line = f.readline()
+        data = json.loads(line)
+        assert "type" in data
+        assert "data" in data
+
+
+@pytest.mark.asyncio
+async def test_jsonl_backend_handles_special_characters(tmp_path):
+    """JSONLBackend handles special characters in data."""
+    filepath = tmp_path / "test.jsonl"
+    backend = JSONLBackend(str(filepath))
+
+    user = User(id=123456789012345678, username="Test\nUser\"Quote")
+    await backend.write(user, "user")
+
+    entries = await backend.read_all()
+    assert entries[0]["data"]["username"] == "Test\nUser\"Quote"
