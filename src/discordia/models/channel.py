@@ -5,8 +5,9 @@ import re
 from datetime import datetime
 from typing import ClassVar
 
-from pydantic import ConfigDict, field_validator
+from pydantic import field_validator
 from sqlmodel import Field
+from sqlmodel._compat import SQLModelConfig
 
 from discordia.models.base import ValidatedSQLModel
 
@@ -17,7 +18,7 @@ class DiscordTextChannel(ValidatedSQLModel, table=True):
     Text channels contain messages and may optionally belong to a parent category.
     """
 
-    model_config = ConfigDict(extra="ignore")
+    model_config = SQLModelConfig(extra="ignore")
 
     __tablename__ = "text_channels"
 

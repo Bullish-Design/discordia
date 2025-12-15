@@ -4,9 +4,8 @@ from __future__ import annotations
 import os
 
 import pytest
-from pydantic import ValidationError
-
 from discordia.settings import Settings
+from pydantic import ValidationError
 
 
 def test_settings_with_required_fields() -> None:

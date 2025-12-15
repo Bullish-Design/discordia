@@ -3,8 +3,6 @@ from __future__ import annotations
 
 from typing import Type
 
-from pydantic import ValidationError as PydanticValidationError
-
 from discordia.exceptions import (
     CategoryNotFoundError,
     ChannelNotFoundError,
@@ -20,6 +18,7 @@ from discordia.exceptions import (
     PersistenceError,
     ValidationError,
 )
+from pydantic import ValidationError as PydanticValidationError
 
 
 def _all_discordia_exceptions() -> list[Type[Exception]]:

@@ -3,8 +3,9 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import ConfigDict, field_validator
+from pydantic import field_validator
 from sqlmodel import Field
+from sqlmodel._compat import SQLModelConfig
 
 from discordia.models.base import ValidatedSQLModel
 
@@ -15,7 +16,7 @@ class DiscordMessage(ValidatedSQLModel, table=True):
     Messages are posted by users in channels and may be edited after creation.
     """
 
-    model_config = ConfigDict(extra="ignore")
+    model_config = SQLModelConfig(extra="ignore")
 
     __tablename__ = "messages"
 

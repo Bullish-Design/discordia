@@ -5,16 +5,15 @@ from datetime import datetime
 from typing import Any
 
 import pytest
+from discordia.models.category import DiscordCategory
+from discordia.models.channel import DiscordTextChannel
+from discordia.models.message import DiscordMessage
+from discordia.models.user import DiscordUser
 from pydantic import ValidationError
 from sqlalchemy import event, inspect
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, SQLModel, create_engine
-
-from discordia.models.category import DiscordCategory
-from discordia.models.channel import DiscordTextChannel
-from discordia.models.message import DiscordMessage
-from discordia.models.user import DiscordUser
 
 
 def _create_sqlite_engine() -> Engine:
