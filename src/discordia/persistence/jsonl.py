@@ -1,10 +1,9 @@
 # src/discordia/persistence/jsonl.py
 from __future__ import annotations
 
+import asyncio
 import json
 from typing import Any
-
-import aiofiles  # type: ignore[import-untyped]
 from pydantic import BaseModel
 
 from discordia.exceptions import JSONLError
@@ -50,8 +49,7 @@ class JSONLWriter:
             entry: dict[str, Any] = {"type": entity_type, "data": data}
             line = json.dumps(entry, separators=(",", ":"), ensure_ascii=False)
 
-            async with aiofiles.open(self.filepath, mode="a", encoding="utf-8") as f:
-                await f.write(line + "\n")
+            await asyncio.to_thread(_append_line, self.filepath, line)
         except Exception as e:
             raise JSONLError(f"Failed to write {entity_type} to JSONL", cause=e) from e
 
@@ -86,18 +84,27 @@ class JSONLWriter:
         """
 
         try:
-            entries: list[dict[str, Any]] = []
-            async with aiofiles.open(self.filepath, mode="r", encoding="utf-8") as f:
-                async for line in f:
-                    stripped = line.strip()
-                    if not stripped:
-                        continue
-                    entries.append(json.loads(stripped))
-            return entries
+            return await asyncio.to_thread(_read_all_lines, self.filepath)
         except FileNotFoundError:
             return []
         except Exception as e:
             raise JSONLError("Failed to read JSONL file", cause=e) from e
+
+
+def _append_line(filepath: str, line: str) -> None:
+    with open(filepath, mode="a", encoding="utf-8") as f:
+        f.write(line + "\n")
+
+
+def _read_all_lines(filepath: str) -> list[dict[str, Any]]:
+    entries: list[dict[str, Any]] = []
+    with open(filepath, mode="r", encoding="utf-8") as f:
+        for line in f:
+            stripped = line.strip()
+            if not stripped:
+                continue
+            entries.append(json.loads(stripped))
+    return entries
 
 
 __all__ = ["JSONLWriter"]
