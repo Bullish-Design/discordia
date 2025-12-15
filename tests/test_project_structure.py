@@ -77,7 +77,6 @@ def test_pyproject_toml_has_required_config() -> None:
         "python-dotenv>=1.0.0",
         "aiosqlite>=0.19.0",
     }
-    # print(f"\n\nDependencies found: \n{sorted(deps)}\n")
     missing = required_deps - deps
     assert not missing, f"Missing dependencies: {sorted(missing)}"
 
@@ -89,7 +88,6 @@ def test_pyproject_toml_has_required_config() -> None:
         "mypy>=1.5.0",
         "ruff>=0.1.0",
     }
-    # print(f"\n\nOptional Dependencies (dev) found: \n{sorted(dev)}\n\n")
     missing_dev = required_dev - dev
     assert not missing_dev, f"Missing dev dependencies: {sorted(missing_dev)}"
 

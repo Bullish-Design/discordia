@@ -16,6 +16,7 @@ from discordia.exceptions import (
     PersistenceError,
     ValidationError,
 )
+from discordia.settings import Settings
 
 __version__ = "0.1.0"
 
@@ -33,4 +34,5 @@ __all__ = [
     "MessageSendError",
     "PersistenceError",
     "ValidationError",
+    "Settings",
 ]
