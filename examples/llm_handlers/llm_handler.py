@@ -25,12 +25,12 @@ class LLMHandler:
     def __init__(
         self,
         api_key: SecretStr,
-        provider: str = "anthropic",
-        model: str = "claude-sonnet-4-20250514",
-        temperature: float = 0.7,
+        provider: str = "openai",
+        model: str = "gpt-5-nano",
+        temperature: float = 1, # gpt-5-nano doesnt accept anything but 1? 0.7,
         channel_pattern: str | None = None,
     ) -> None:
-        self.config = LLMConfig(provider=provider, model=model, temperature=temperature)
+        self.config = LLMConfig(provider=provider, model=model, temperature=temperature, api_key=api_key.get_secret_value(),)
         self.channel_pattern = re.compile(channel_pattern) if channel_pattern else None
         ConversationResponse.set_llm_config(self.config)
 
@@ -55,7 +55,10 @@ class LLMHandler:
         )
 
         response = await access_property_async(response_model, "response")
-        logger.info("Generated response for %s (%d chars)", ctx.channel_name, len(response))
+        if response:
+            logger.info("Generated response for %s (%d chars)", ctx.channel_name, len(response))
+        else:
+            logger.warning("No response generated for %s", ctx.channel_name)
         return response
 
 
