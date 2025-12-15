@@ -47,11 +47,11 @@ def test_settings_with_anthropic_key():
     settings = Settings(
         discord_token="test_token",
         server_id=123456789012345678,
-        anthropic_api_key="sk-ant-test",
+        llm_api_key="sk-ant-test",
         _env_file=None,
     )
-    assert settings.anthropic_api_key is not None
-    assert settings.anthropic_api_key.get_secret_value() == "sk-ant-test"
+    assert settings.llm_api_key is not None
+    assert settings.llm_api_key.get_secret_value() == "sk-ant-test"
 
 
 def test_message_context_limit_validation():

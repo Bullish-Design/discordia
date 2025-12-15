@@ -38,7 +38,7 @@ Username = Annotated[
 
 # Secure credential storage
 DiscordToken = SecretStr
-AnthropicKey = SecretStr
+LlmApiKey = SecretStr
 
 
 __all__ = [
@@ -48,5 +48,5 @@ __all__ = [
     "MessageContent",
     "Username",
     "DiscordToken",
-    "AnthropicKey",
+    "LlmApiKey",
 ]

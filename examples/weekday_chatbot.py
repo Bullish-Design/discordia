@@ -22,8 +22,9 @@ from __future__ import annotations
 import logging
 from datetime import date
 
-from discordia import Bot, Settings
-from discordia.templates import CategoryTemplate, ServerTemplate, TextChannelTemplate
+#from discordia import Bot, Settings
+from discordia import Bot, Settings, CategoryTemplate, ServerTemplate, TextChannelTemplate
+#from discordia.templates import CategoryTemplate, ServerTemplate, TextChannelTemplate
 
 # Import custom handler (you'll need to copy this to your project)
 from weekday_handler import WeekDayHandler
@@ -72,7 +73,7 @@ def main() -> None:
     template = create_weekday_template()
     
     handler = WeekDayHandler(
-        api_key=settings.anthropic_api_key,
+        api_key=settings.openai_api_key,
         provider=settings.llm_provider,
         model=settings.llm_model,
         temperature=settings.llm_temperature,

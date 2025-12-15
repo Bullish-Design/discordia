@@ -4,7 +4,7 @@ from __future__ import annotations
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from discordia.types import AnthropicKey, DiscordSnowflake, DiscordToken
+from discordia.types import LlmApiKey, DiscordSnowflake, DiscordToken
 
 
 class Settings(BaseSettings):
@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     server_id: DiscordSnowflake = Field(..., description="Discord server (guild) ID to operate in")
 
     # Optional LLM configuration (None if not using LLM handlers)
-    anthropic_api_key: AnthropicKey | None = Field(default=None, description="Anthropic API key for Claude access")
+    llm_api_key: LlmApiKey | None = Field(default=None, description="LLM API key for LLM integration")
 
     # Template and reconciliation settings
     auto_reconcile: bool = Field(default=True, description="Auto-reconcile templates to Discord on startup")
