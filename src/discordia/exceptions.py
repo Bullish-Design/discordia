@@ -46,30 +46,6 @@ class MessageSendError(DiscordAPIError):
     """Raised when sending a message to Discord fails."""
 
 
-class PersistenceError(DiscordiaError):
-    """Raised when persistence operations fail."""
-
-
-class DatabaseError(PersistenceError):
-    """Raised when database operations fail."""
-
-
-class JSONLError(PersistenceError):
-    """Raised when JSONL read/write operations fail."""
-
-
-class LLMError(DiscordiaError):
-    """Raised when an LLM provider operation fails."""
-
-
-class LLMAPIError(LLMError):
-    """Raised when an LLM API call fails."""
-
-
-class ContextTooLargeError(LLMError):
-    """Raised when LLM context exceeds model limits."""
-
-
 class TemplateError(DiscordiaError):
     """Raised when template validation or processing fails."""
 
@@ -93,12 +69,6 @@ __all__ = [
     "ChannelNotFoundError",
     "CategoryNotFoundError",
     "MessageSendError",
-    "PersistenceError",
-    "DatabaseError",
-    "JSONLError",
-    "LLMError",
-    "LLMAPIError",
-    "ContextTooLargeError",
     "TemplateError",
     "ReconciliationError",
     "StateError",

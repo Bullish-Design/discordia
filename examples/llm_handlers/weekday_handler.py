@@ -1,23 +1,29 @@
-# src/discordia/handlers/llm.py
+# examples/llm_handlers/weekday_handler.py
+"""LLM handler specifically for weekday-pattern channels."""
 from __future__ import annotations
 
 import logging
+import re
 from typing import TYPE_CHECKING
 
 from pygentic import LLMConfig
 
-from discordia.engine.context import MessageContext
-from discordia.handlers.models import ConversationResponse
-from discordia.handlers.pygentic_adapter import access_property_async, generate_async
+from discordia import MessageContext
+
+from examples.llm_handlers.models import ConversationResponse
+from examples.llm_handlers.pygentic_adapter import access_property_async, generate_async
 
 if TYPE_CHECKING:
     from pydantic import SecretStr
 
-logger = logging.getLogger("discordia.handlers.llm")
+logger = logging.getLogger("examples.llm_handlers.weekday")
+
+# Pattern matches YYYY-WW-DD format (4-digit year, 01-53 week, 01-07 day)
+WEEKDAY_PATTERN = re.compile(r"^\d{4}-\d{2}-0[1-7]$")
 
 
-class LLMHandler:
-    """LLM-powered message handler using PyGentic."""
+class WeekDayHandler:
+    """LLM handler that responds to messages in YYYY-WW-DD format channels."""
 
     def __init__(
         self,
@@ -30,11 +36,14 @@ class LLMHandler:
         ConversationResponse.set_llm_config(self.config)
 
     async def can_handle(self, ctx: MessageContext) -> bool:
-        """Handle all messages in log channels."""
-        return ctx.channel_name.count("-") == 2
+        """Handle messages in YYYY-WW-DD format channels."""
+        allowed = bool(WEEKDAY_PATTERN.match(ctx.channel_name))
+        logger.debug("Can handle channel '%s': %s", ctx.channel_name, allowed)
+        return allowed
 
     async def handle(self, ctx: MessageContext) -> str | None:
         """Generate LLM response using PyGentic."""
+        logger.info("Handling message in channel '%s'", ctx.channel_name)
         history = await ctx.get_history(limit=20)
         history_text = [f"{m.author_id}: {m.content}" for m in history]
 
@@ -52,4 +61,4 @@ class LLMHandler:
         return response
 
 
-__all__ = ["LLMHandler"]
+__all__ = ["WeekDayHandler"]

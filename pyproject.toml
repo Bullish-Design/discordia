@@ -1,6 +1,7 @@
+# pyproject.toml
 [project]
 name = "discordia"
-version = "0.2.0"
+version = "0.3.0"
 description = "Declarative Discord bot framework with state management"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -8,7 +9,6 @@ dependencies = [
     "discord-py-interactions>=5.0.0",
     "pydantic>=2.0.0",
     "pydantic-settings>=2.0.0",
-    "pygentic",
 ]
 
 [project.optional-dependencies]
@@ -19,9 +19,6 @@ dev = [
     "mypy>=1.8.0",
     "ruff>=0.1.0",
 ]
-
-[tool.uv.sources]
-pygentic = { git = "https://github.com/Bullish-Design/PyGentic.git" }
 
 [build-system]
 requires = ["hatchling"]
@@ -78,7 +75,7 @@ exclude_lines = [
 directory = "htmlcov"
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
@@ -92,7 +89,7 @@ warn_no_return = true
 
 [tool.ruff]
 line-length = 120
-target-version = "py311"
+target-version = "py312"
 
 [tool.ruff.lint]
 select = [

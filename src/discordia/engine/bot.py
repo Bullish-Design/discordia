@@ -29,15 +29,15 @@ except Exception:
         MESSAGE_CONTENT = 0
 
     def listen():
-        def decorator(func):
+        def decorator(func: Any) -> Any:
             return func
-
         return decorator
 
     class Client:
         def __init__(self, token: str, intents: int) -> None:
             self.token = token
             self.intents = intents
+            self.user: Any = None
 
         def add_listener(self, _listener: Any) -> None:
             return
@@ -63,7 +63,10 @@ class Bot:
     """Thin event dispatcher that delegates to handlers."""
 
     def __init__(
-        self, settings: Settings, template: ServerTemplate | None = None, handlers: list[MessageHandler] | None = None
+        self,
+        settings: Settings,
+        template: ServerTemplate | None = None,
+        handlers: list[MessageHandler] | None = None,
     ) -> None:
         self.settings = settings
         self.template = template
@@ -91,12 +94,10 @@ class Bot:
 
         @listen()
         async def on_ready(event: Ready) -> None:
-            #logger.info("Received on_ready event")
             await self._on_ready(event)
 
         @listen()
         async def on_message_create(event: MessageCreate) -> None:
-            #logger.info("Received on_message_create event")
             await self._on_message(event)
 
         self.client.add_listener(on_ready)
@@ -105,7 +106,7 @@ class Bot:
     async def _on_ready(self, event: Ready) -> None:
         """Process ready event."""
         try:
-            logger.info("Bot ready as %s",self.client.user.username)  # event.user.username)
+            logger.info("Bot ready as %s", self.client.user.username)
 
             guild = await self.client.fetch_guild(self.settings.server_id)
             await self.discovery.discover_categories(guild)
@@ -134,12 +135,12 @@ class Bot:
 
     async def _on_message(self, event: MessageCreate) -> None:
         """Process message event."""
-        #logger.info("    Processing message event...")
         try:
             message = event.message
-            logger.info(f"Received message from {message.author.username}: {message.content}\n")
+            logger.debug("Received message from %s: %s", message.author.username, message.content)
+
             if message.author.bot:
-                logger.info(f"    Ignoring bot message from {message.author.username}")
+                logger.debug("Ignoring bot message from %s", message.author.username)
                 return
 
             user = User(

@@ -1,13 +1,29 @@
-# src/discordia/handlers/pygentic_adapter.py
+# examples/llm_handlers/pygentic_adapter.py
+"""Async adapter for PyGentic LLM calls."""
 from __future__ import annotations
 
 import asyncio
 from functools import partial
 from typing import Any, TypeVar
 
-from discordia.exceptions import ContextTooLargeError, LLMAPIError
-
 T = TypeVar("T")
+
+
+class LLMError(Exception):
+    """Base exception for LLM operations."""
+
+    def __init__(self, message: str, cause: Exception | None = None) -> None:
+        self.message = message
+        self.cause = cause
+        super().__init__(message)
+
+
+class LLMAPIError(LLMError):
+    """Raised when an LLM API call fails."""
+
+
+class ContextTooLargeError(LLMError):
+    """Raised when LLM context exceeds model limits."""
 
 
 async def generate_async(model_class: type[T], **kwargs: Any) -> T:
@@ -28,4 +44,4 @@ async def access_property_async(instance: Any, property_name: str) -> Any:
     return await loop.run_in_executor(None, lambda: getattr(instance, property_name))
 
 
-__all__ = ["generate_async", "access_property_async"]
+__all__ = ["generate_async", "access_property_async", "LLMError", "LLMAPIError", "ContextTooLargeError"]

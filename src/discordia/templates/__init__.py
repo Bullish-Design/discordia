@@ -5,28 +5,26 @@ from discordia.templates.base import TemplateModel
 from discordia.templates.category import CategoryTemplate
 from discordia.templates.channel import (
     AnnouncementChannelTemplate,
+    BaseChannelTemplate,
     ChannelTemplate,
     ChannelType,
     ForumChannelTemplate,
     TextChannelTemplate,
     VoiceChannelTemplate,
 )
-from discordia.templates.patterns import ChannelPattern, DailyLogPattern, PrefixedPattern
+from discordia.templates.patterns import ChannelPattern
 from discordia.templates.server import ServerTemplate
-from discordia.templates.weekday_pattern import WeekDayPattern
 
 __all__ = [
     "AnnouncementChannelTemplate",
+    "BaseChannelTemplate",
     "CategoryTemplate",
     "ChannelPattern",
     "ChannelTemplate",
     "ChannelType",
-    "DailyLogPattern",
     "ForumChannelTemplate",
-    "PrefixedPattern",
     "ServerTemplate",
     "TemplateModel",
     "TextChannelTemplate",
     "VoiceChannelTemplate",
-    "WeekDayPattern",
 ]

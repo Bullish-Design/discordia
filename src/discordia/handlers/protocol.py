@@ -1,9 +1,10 @@
 # src/discordia/handlers/protocol.py
 from __future__ import annotations
 
-from typing import Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
-from discordia.engine.context import MessageContext
+if TYPE_CHECKING:
+    from discordia.engine.context import MessageContext
 
 
 @runtime_checkable

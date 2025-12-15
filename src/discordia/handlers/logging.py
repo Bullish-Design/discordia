@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
 
-from discordia.engine.context import MessageContext
+if TYPE_CHECKING:
+    from discordia.engine.context import MessageContext
 
 logger = logging.getLogger("discordia.handlers.logging")
 

@@ -28,14 +28,14 @@ class Reconciler:
         """Sync template to Discord."""
         try:
             resolved = template.resolve_patterns()
-            print(f"\n\nStarting reconciliation for server ID {self.server_id}")
+            logger.info("Starting reconciliation for server ID %s", self.server_id)
 
             for category_template in resolved.categories:
-                print(f"\nReconciling category {category_template.name}")
+                logger.debug("Reconciling category %s", category_template.name)
                 await self._reconcile_category(guild, category_template)
 
             for channel_template in resolved.uncategorized_channels:
-                print(f"\nReconciling channel {channel_template.name}")
+                logger.debug("Reconciling channel %s", channel_template.name)
                 await self._reconcile_channel(guild, channel_template, category_id=None)
 
             logger.info("Reconciliation complete")
