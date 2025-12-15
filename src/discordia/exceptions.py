@@ -1,23 +1,16 @@
 # src/discordia/exceptions.py
 from __future__ import annotations
 
-from pydantic import ValidationError
-
 
 def _default_message_for(exc_type: type[BaseException]) -> str:
     """Derive a default message from an exception type."""
-
     name = exc_type.__name__
     spaced = "".join((" " + c if c.isupper() and i > 0 else c) for i, c in enumerate(name)).strip()
     return spaced
 
 
 class DiscordiaError(Exception):
-    """Base exception for all Discordia errors.
-
-    All Discordia exceptions support an optional human-friendly message and an optional underlying
-    cause. The cause is included in the string representation to aid debugging.
-    """
+    """Base exception for all Discordia errors."""
 
     message: str
     cause: Exception | None
@@ -54,7 +47,7 @@ class MessageSendError(DiscordAPIError):
 
 
 class PersistenceError(DiscordiaError):
-    """Raised when persistence operations (database/JSONL) fail."""
+    """Raised when persistence operations fail."""
 
 
 class DatabaseError(PersistenceError):
@@ -77,18 +70,37 @@ class ContextTooLargeError(LLMError):
     """Raised when LLM context exceeds model limits."""
 
 
+class TemplateError(DiscordiaError):
+    """Raised when template validation or processing fails."""
+
+
+class ReconciliationError(DiscordiaError):
+    """Raised when template reconciliation to Discord fails."""
+
+
+class StateError(DiscordiaError):
+    """Raised when state management operations fail."""
+
+
+class HandlerError(DiscordiaError):
+    """Raised when message handler execution fails."""
+
+
 __all__ = [
-    "CategoryNotFoundError",
-    "ChannelNotFoundError",
-    "ConfigurationError",
-    "ContextTooLargeError",
-    "DatabaseError",
-    "DiscordAPIError",
     "DiscordiaError",
-    "JSONLError",
-    "LLMAPIError",
-    "LLMError",
+    "ConfigurationError",
+    "DiscordAPIError",
+    "ChannelNotFoundError",
+    "CategoryNotFoundError",
     "MessageSendError",
     "PersistenceError",
-    "ValidationError",
+    "DatabaseError",
+    "JSONLError",
+    "LLMError",
+    "LLMAPIError",
+    "ContextTooLargeError",
+    "TemplateError",
+    "ReconciliationError",
+    "StateError",
+    "HandlerError",
 ]

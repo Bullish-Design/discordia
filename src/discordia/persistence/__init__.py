@@ -1,10 +1,8 @@
 # src/discordia/persistence/__init__.py
 from __future__ import annotations
 
-from discordia.persistence.database import DatabaseWriter
-from discordia.persistence.jsonl import JSONLWriter
+from discordia.persistence.jsonl import JSONLBackend
+from discordia.persistence.memory import MemoryBackend
+from discordia.persistence.protocol import PersistenceBackend
 
-__all__ = [
-    "DatabaseWriter",
-    "JSONLWriter",
-]
+__all__ = ["JSONLBackend", "MemoryBackend", "PersistenceBackend"]

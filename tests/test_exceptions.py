@@ -1,9 +1,7 @@
 # tests/test_exceptions.py
 from __future__ import annotations
 
-from typing import Type
-
-from pydantic import ValidationError as PydanticValidationError
+import pytest
 
 from discordia.exceptions import (
     CategoryNotFoundError,
@@ -13,108 +11,139 @@ from discordia.exceptions import (
     DatabaseError,
     DiscordAPIError,
     DiscordiaError,
+    HandlerError,
     JSONLError,
     LLMAPIError,
     LLMError,
     MessageSendError,
     PersistenceError,
-    ValidationError,
+    ReconciliationError,
+    StateError,
+    TemplateError,
 )
 
 
-def _all_discordia_exceptions() -> list[Type[Exception]]:
-    return [
-        DiscordiaError,
-        ConfigurationError,
-        DiscordAPIError,
-        ChannelNotFoundError,
-        CategoryNotFoundError,
-        MessageSendError,
-        PersistenceError,
-        DatabaseError,
-        JSONLError,
-        LLMError,
-        LLMAPIError,
-        ContextTooLargeError,
-    ]
+def test_base_exception_default_message():
+    """DiscordiaError derives default message from class name."""
+    error = DiscordiaError()
+    assert error.message == "Discordia Error"
+    assert str(error) == "Discordia Error"
 
 
-def test_base_exception_with_message_only() -> None:
-    """Base exception works with just a message."""
-    error = DiscordiaError("Something went wrong")
-    assert str(error) == "Something went wrong"
-    assert error.message == "Something went wrong"
-    assert error.cause is None
+def test_base_exception_custom_message():
+    """DiscordiaError accepts custom message."""
+    error = DiscordiaError("Custom error message")
+    assert error.message == "Custom error message"
+    assert str(error) == "Custom error message"
 
 
-def test_base_exception_with_cause() -> None:
-    """Base exception includes cause in string representation."""
+def test_base_exception_with_cause():
+    """DiscordiaError can wrap another exception."""
     cause = ValueError("Original error")
-    error = DiscordiaError("Something went wrong", cause=cause)
-    rendered = str(error)
-    assert "Something went wrong" in rendered
-    assert "Original error" in rendered
+    error = DiscordiaError("Wrapper error", cause=cause)
+    assert error.message == "Wrapper error"
     assert error.cause is cause
+    assert str(error) == "Wrapper error (caused by: Original error)"
 
 
-def test_exception_hierarchy() -> None:
-    """Exception inheritance is correct."""
-    assert issubclass(ConfigurationError, DiscordiaError)
-    assert issubclass(DiscordAPIError, DiscordiaError)
-    assert issubclass(ChannelNotFoundError, DiscordAPIError)
-    assert issubclass(CategoryNotFoundError, DiscordAPIError)
-    assert issubclass(MessageSendError, DiscordAPIError)
-    assert issubclass(PersistenceError, DiscordiaError)
-    assert issubclass(DatabaseError, PersistenceError)
-    assert issubclass(JSONLError, PersistenceError)
-    assert issubclass(LLMError, DiscordiaError)
-    assert issubclass(LLMAPIError, LLMError)
-    assert issubclass(ContextTooLargeError, LLMError)
+def test_configuration_error():
+    """ConfigurationError is a DiscordiaError."""
+    error = ConfigurationError("Invalid config")
+    assert isinstance(error, DiscordiaError)
+    assert error.message == "Invalid config"
 
 
-def test_all_exceptions_can_be_instantiated_with_message_only() -> None:
-    """Every custom exception supports a message-only constructor."""
-    for exc_type in _all_discordia_exceptions():
-        exc = exc_type("message")
-        assert isinstance(exc, exc_type)
-        assert str(exc) == "message"
-        assert getattr(exc, "cause") is None
+def test_discord_api_error():
+    """DiscordAPIError is a DiscordiaError."""
+    error = DiscordAPIError("API request failed")
+    assert isinstance(error, DiscordiaError)
+    assert error.message == "API request failed"
 
 
-def test_all_exceptions_can_be_instantiated_with_cause() -> None:
-    """Every custom exception supports message + cause."""
-    cause = RuntimeError("boom")
-    for exc_type in _all_discordia_exceptions():
-        exc = exc_type("message", cause=cause)
-        assert isinstance(exc, exc_type)
-        assert exc.cause is cause
-        assert "boom" in str(exc)
+def test_channel_not_found_error():
+    """ChannelNotFoundError is a DiscordAPIError."""
+    error = ChannelNotFoundError("Channel not found")
+    assert isinstance(error, DiscordAPIError)
+    assert isinstance(error, DiscordiaError)
 
 
-def test_str_representation_without_cause_does_not_include_cause_marker() -> None:
-    """__str__ should not mention causes when absent."""
-    exc = DatabaseError("db failed")
-    assert str(exc) == "db failed"
-    assert "caused by" not in str(exc).lower()
+def test_category_not_found_error():
+    """CategoryNotFoundError is a DiscordAPIError."""
+    error = CategoryNotFoundError()
+    assert isinstance(error, DiscordAPIError)
+    assert error.message == "Category Not Found Error"
 
 
-def test_str_representation_with_cause_includes_cause_marker() -> None:
-    """__str__ should mention causes when present."""
-    exc = DatabaseError("db failed", cause=ValueError("bad sql"))
-    rendered = str(exc).lower()
-    assert "db failed" in rendered
-    assert "caused by" in rendered
-    assert "bad sql" in rendered
+def test_message_send_error():
+    """MessageSendError is a DiscordAPIError."""
+    error = MessageSendError("Failed to send")
+    assert isinstance(error, DiscordAPIError)
 
 
-def test_all_custom_exceptions_have_docstrings() -> None:
-    """All custom exception types must be documented."""
-    for exc_type in _all_discordia_exceptions():
-        doc = exc_type.__doc__
-        assert doc is not None
-        assert doc.strip() != ""
+def test_persistence_error():
+    """PersistenceError is a DiscordiaError."""
+    error = PersistenceError("Storage failed")
+    assert isinstance(error, DiscordiaError)
 
 
-def test_validation_error_is_reexported_from_pydantic() -> None:
-    """ValidationError is reexported for convenience."""
-    assert ValidationError is PydanticValidationError
+def test_database_error():
+    """DatabaseError is a PersistenceError."""
+    error = DatabaseError("DB connection failed")
+    assert isinstance(error, PersistenceError)
+
+
+def test_jsonl_error():
+    """JSONLError is a PersistenceError."""
+    error = JSONLError("Failed to write JSONL")
+    assert isinstance(error, PersistenceError)
+
+
+def test_llm_error():
+    """LLMError is a DiscordiaError."""
+    error = LLMError("LLM request failed")
+    assert isinstance(error, DiscordiaError)
+
+
+def test_llm_api_error():
+    """LLMAPIError is an LLMError."""
+    error = LLMAPIError("API call failed")
+    assert isinstance(error, LLMError)
+
+
+def test_context_too_large_error():
+    """ContextTooLargeError is an LLMError."""
+    error = ContextTooLargeError("Context exceeds limit")
+    assert isinstance(error, LLMError)
+
+
+def test_template_error():
+    """TemplateError is a DiscordiaError."""
+    error = TemplateError("Invalid template")
+    assert isinstance(error, DiscordiaError)
+
+
+def test_reconciliation_error():
+    """ReconciliationError is a DiscordiaError."""
+    error = ReconciliationError("Reconciliation failed")
+    assert isinstance(error, DiscordiaError)
+
+
+def test_state_error():
+    """StateError is a DiscordiaError."""
+    error = StateError("State operation failed")
+    assert isinstance(error, DiscordiaError)
+
+
+def test_handler_error():
+    """HandlerError is a DiscordiaError."""
+    error = HandlerError("Handler execution failed")
+    assert isinstance(error, DiscordiaError)
+
+
+def test_exception_hierarchy():
+    """Verify exception inheritance chain."""
+    error = ChannelNotFoundError("test")
+    assert isinstance(error, ChannelNotFoundError)
+    assert isinstance(error, DiscordAPIError)
+    assert isinstance(error, DiscordiaError)
+    assert isinstance(error, Exception)

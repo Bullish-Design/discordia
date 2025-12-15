@@ -1,130 +1,148 @@
 # tests/test_settings.py
 from __future__ import annotations
 
-import os
-
 import pytest
 from pydantic import ValidationError
 
 from discordia.settings import Settings
 
 
-def test_settings_with_required_fields() -> None:
-    """Settings can be created with all required fields."""
+def test_settings_required_fields():
+    """Settings requires discord_token and server_id."""
+    with pytest.raises(ValidationError):
+        Settings()
+
+
+def test_settings_minimal_config():
+    """Settings can be created with minimal required fields."""
     settings = Settings(
-        discord_token="test-token",
-        server_id=123456789,
-        anthropic_api_key="test-key",
+        discord_token="test_token",
+        server_id=123456789012345678,
+        _env_file=None,
     )
-
-    assert settings.discord_token == "test-token"
-    assert settings.server_id == 123456789
-    assert settings.anthropic_api_key == "test-key"
+    assert settings.discord_token.get_secret_value() == "test_token"
+    assert settings.server_id == 123456789012345678
 
 
-def test_settings_with_defaults() -> None:
-    """Optional fields use default values."""
+def test_settings_defaults():
+    """Settings uses sensible defaults for optional fields."""
     settings = Settings(
-        discord_token="test-token",
-        server_id=123456789,
-        anthropic_api_key="test-key",
+        discord_token="test_token",
+        server_id=123456789012345678,
+        _env_file=None,
     )
-
-    assert settings.log_category_name == "Log"
-    assert settings.auto_create_daily_logs is True
-    assert settings.database_url == "sqlite+aiosqlite:///discordia.db"
-    assert settings.jsonl_path == "discordia_backup.jsonl"
-    assert settings.llm_model == "claude-sonnet-4-20250514"
+    assert settings.auto_reconcile is True
+    assert settings.reconcile_interval == 300
     assert settings.message_context_limit == 20
     assert settings.max_message_length == 2000
+    assert settings.persistence_enabled is True
+    assert settings.jsonl_path == "discordia_state.jsonl"
+    assert settings.llm_provider == "anthropic"
+    assert settings.llm_model == "claude-sonnet-4-20250514"
+    assert settings.llm_temperature == 0.7
 
 
-def test_settings_missing_required_field() -> None:
-    """Settings raises ValidationError when required field missing."""
-    with pytest.raises(ValidationError) as exc_info:
-        Settings(
-            discord_token="test-token",
-            server_id=123456789,
-        )
-
-    assert "anthropic_api_key" in str(exc_info.value)
-
-
-def test_settings_invalid_server_id() -> None:
-    """Settings validates server_id is positive."""
-    with pytest.raises(ValidationError):
-        Settings(
-            discord_token="test-token",
-            server_id=-1,
-            anthropic_api_key="test-key",
-        )
-
-
-@pytest.mark.parametrize("value", [0, 101])
-def test_settings_invalid_message_context_limit(value: int) -> None:
-    """Settings validates message_context_limit is between 1 and 100."""
-    with pytest.raises(ValidationError):
-        Settings(
-            discord_token="test-token",
-            server_id=123456789,
-            anthropic_api_key="test-key",
-            message_context_limit=value,
-        )
-
-
-@pytest.mark.parametrize("value", [0, 2001])
-def test_settings_invalid_max_message_length(value: int) -> None:
-    """Settings validates max_message_length is between 1 and 2000."""
-    with pytest.raises(ValidationError):
-        Settings(
-            discord_token="test-token",
-            server_id=123456789,
-            anthropic_api_key="test-key",
-            max_message_length=value,
-        )
-
-
-def test_settings_override_defaults() -> None:
-    """Optional fields can be overridden."""
+def test_settings_with_anthropic_key():
+    """Settings accepts optional anthropic_api_key."""
     settings = Settings(
-        discord_token="test-token",
-        server_id=123456789,
-        anthropic_api_key="test-key",
-        log_category_name="Custom",
-        message_context_limit=50,
-        max_message_length=1500,
-        auto_create_daily_logs=False,
+        discord_token="test_token",
+        server_id=123456789012345678,
+        anthropic_api_key="sk-ant-test",
+        _env_file=None,
     )
-
-    assert settings.log_category_name == "Custom"
-    assert settings.message_context_limit == 50
-    assert settings.max_message_length == 1500
-    assert settings.auto_create_daily_logs is False
+    assert settings.anthropic_api_key is not None
+    assert settings.anthropic_api_key.get_secret_value() == "sk-ant-test"
 
 
-def test_settings_environment_variable_loading(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Settings loads required fields from environment variables."""
-    for key in ("DISCORD_TOKEN", "SERVER_ID", "ANTHROPIC_API_KEY"):
-        if key in os.environ:
-            monkeypatch.delenv(key, raising=False)
+def test_message_context_limit_validation():
+    """message_context_limit must be between 1 and 100."""
+    with pytest.raises(ValidationError, match="must be between 1 and 100"):
+        Settings(
+            discord_token="test_token",
+            server_id=123456789012345678,
+            message_context_limit=0,
+            _env_file=None,
+        )
 
-    monkeypatch.setenv("DISCORD_TOKEN", "env-token")
-    monkeypatch.setenv("SERVER_ID", "42")
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "env-key")
-    monkeypatch.setenv("LOG_CATEGORY_NAME", "EnvLog")
-
-    settings = Settings()
-
-    assert settings.discord_token == "env-token"
-    assert settings.server_id == 42
-    assert settings.anthropic_api_key == "env-key"
-    assert settings.log_category_name == "EnvLog"
+    with pytest.raises(ValidationError, match="must be between 1 and 100"):
+        Settings(
+            discord_token="test_token",
+            server_id=123456789012345678,
+            message_context_limit=101,
+            _env_file=None,
+        )
 
 
-def test_settings_field_descriptions_present() -> None:
-    """Fields provide descriptions for documentation and tooling."""
-    fields = Settings.model_fields
-    assert fields["discord_token"].description
-    assert fields["server_id"].description
-    assert fields["anthropic_api_key"].description
-    assert fields["log_category_name"].description
+def test_max_message_length_validation():
+    """max_message_length must be between 1 and 2000."""
+    with pytest.raises(ValidationError, match="must be between 1 and 2000"):
+        Settings(
+            discord_token="test_token",
+            server_id=123456789012345678,
+            max_message_length=0,
+            _env_file=None,
+        )
+
+    with pytest.raises(ValidationError, match="must be between 1 and 2000"):
+        Settings(
+            discord_token="test_token",
+            server_id=123456789012345678,
+            max_message_length=2001,
+            _env_file=None,
+        )
+
+
+def test_reconcile_interval_validation():
+    """reconcile_interval must be non-negative."""
+    with pytest.raises(ValidationError, match="must be non-negative"):
+        Settings(
+            discord_token="test_token",
+            server_id=123456789012345678,
+            reconcile_interval=-1,
+            _env_file=None,
+        )
+
+    # Zero is valid (disables periodic reconciliation)
+    settings = Settings(
+        discord_token="test_token",
+        server_id=123456789012345678,
+        reconcile_interval=0,
+        _env_file=None,
+    )
+    assert settings.reconcile_interval == 0
+
+
+def test_llm_temperature_validation():
+    """llm_temperature must be between 0.0 and 2.0."""
+    with pytest.raises(ValidationError):
+        Settings(
+            discord_token="test_token",
+            server_id=123456789012345678,
+            llm_temperature=-0.1,
+            _env_file=None,
+        )
+
+    with pytest.raises(ValidationError):
+        Settings(
+            discord_token="test_token",
+            server_id=123456789012345678,
+            llm_temperature=2.1,
+            _env_file=None,
+        )
+
+    # Boundaries are valid
+    settings = Settings(
+        discord_token="test_token",
+        server_id=123456789012345678,
+        llm_temperature=0.0,
+        _env_file=None,
+    )
+    assert settings.llm_temperature == 0.0
+
+    settings = Settings(
+        discord_token="test_token",
+        server_id=123456789012345678,
+        llm_temperature=2.0,
+        _env_file=None,
+    )
+    assert settings.llm_temperature == 2.0

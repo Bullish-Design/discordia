@@ -1,8 +1,7 @@
 # src/discordia/__init__.py
 from __future__ import annotations
 
-from discordia.bot import Bot, setup_logging
-from discordia.health import health_check
+from discordia.engine.bot import Bot
 from discordia.exceptions import (
     CategoryNotFoundError,
     ChannelNotFoundError,
@@ -11,16 +10,19 @@ from discordia.exceptions import (
     DatabaseError,
     DiscordAPIError,
     DiscordiaError,
+    HandlerError,
     JSONLError,
     LLMAPIError,
     LLMError,
     MessageSendError,
     PersistenceError,
-    ValidationError,
+    ReconciliationError,
+    StateError,
+    TemplateError,
 )
 from discordia.settings import Settings
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     "Bot",
@@ -31,13 +33,14 @@ __all__ = [
     "DatabaseError",
     "DiscordAPIError",
     "DiscordiaError",
+    "HandlerError",
     "JSONLError",
     "LLMAPIError",
     "LLMError",
     "MessageSendError",
     "PersistenceError",
-    "ValidationError",
+    "ReconciliationError",
     "Settings",
-    "setup_logging",
-    "health_check",
+    "StateError",
+    "TemplateError",
 ]
