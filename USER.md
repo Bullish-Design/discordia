@@ -1,6 +1,6 @@
 # Discordia User Guide
 
-Discordia is a Discord bot that uses Claude (Anthropic's LLM) to respond to messages in specially-named daily log channels.
+Discordia is a Discord bot that uses Mirascope to respond to messages in specially-named daily log channels.
 
 ## Quickstart
 
