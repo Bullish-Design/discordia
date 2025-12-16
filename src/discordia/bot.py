@@ -179,8 +179,19 @@ class Bot:
 
         parent_id_raw = getattr(raw_channel, "parent_id", None)
         parent_id = int(parent_id_raw) if parent_id_raw else None
-        if parent_id is not None and await self.state.get_category(parent_id) is None:
-            parent_id = None
+        
+        # Check if this is a thread
+        parent_channel_id_raw = getattr(raw_channel, "parent_channel_id", None)
+        parent_channel_id = int(parent_channel_id_raw) if parent_channel_id_raw else None
+        
+        # For threads, parent_channel_id takes precedence
+        category_id = None
+        if parent_channel_id:
+            # It's a thread, don't set category_id
+            pass
+        elif parent_id is not None and await self.state.get_category(parent_id) is not None:
+            # It's a regular channel in a category
+            category_id = parent_id
 
         topic_raw = getattr(raw_channel, "topic", None)
         topic: str | None = str(topic_raw) if topic_raw else None
@@ -190,7 +201,8 @@ class Bot:
                 id=channel_id,
                 name=str(getattr(raw_channel, "name", "unknown")),
                 server_id=self.config.server_id,
-                category_id=parent_id,
+                category_id=category_id,
+                parent_channel_id=parent_channel_id,
                 topic=topic,
             )
             await self.state.save_channel(channel)
@@ -226,12 +238,22 @@ class Bot:
             await self.state.save_user(user)
 
             timestamp = getattr(message, "timestamp", None) or _safe_now()
+            
+            # Extract replied message ID if this is a reply
+            replied_to_id = None
+            message_ref = getattr(message, "message_reference", None)
+            if message_ref:
+                replied_to_msg_id = getattr(message_ref, "message_id", None)
+                if replied_to_msg_id:
+                    replied_to_id = int(replied_to_msg_id)
+            
             inbound = Message(
                 id=int(getattr(message, "id", 0) or 0),
                 content=str(getattr(message, "content", ""))[:2000],
                 author_id=user.id,
                 channel_id=channel.id,
                 timestamp=timestamp,
+                replied_to_id=replied_to_id,
             )
             await self.state.save_message(inbound)
 

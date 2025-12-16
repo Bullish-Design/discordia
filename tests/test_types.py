@@ -42,8 +42,13 @@ def test_channel_name_valid() -> None:
 
 
 def test_channel_name_uppercase() -> None:
-    with pytest.raises(ValidationError):
-        ChannelModel(name="General")
+    # Uppercase now allowed for threads
+    assert ChannelModel(name="General").name == "General"
+
+
+def test_channel_name_with_spaces() -> None:
+    # Spaces now allowed for threads
+    assert ChannelModel(name="Thread Test").name == "Thread Test"
 
 
 def test_channel_name_special_chars() -> None:

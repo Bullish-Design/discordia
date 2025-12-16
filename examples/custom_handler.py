@@ -1,9 +1,16 @@
 # examples/custom_handler.py
 from __future__ import annotations
 
-"""Bot with a custom handler."""
+"""Bot with a custom handler.
 
-from pydantic import BaseModel, SecretStr
+Setup:
+    1. Copy .env.example to .env
+    2. Update DISCORDIA_DISCORD_TOKEN and DISCORDIA_SERVER_ID
+    3. Run: python examples/custom_handler.py
+    4. Send "!ping" to test
+"""
+
+from pydantic import BaseModel
 
 from discordia import Bot, BotConfig, Handler, MessageContext
 
@@ -24,10 +31,7 @@ class PingHandler(Handler[PingConfig]):
 
 
 def main() -> None:
-    config = BotConfig(
-        discord_token=SecretStr("your_token_here"),
-        server_id=123456789,
-    )
+    config = BotConfig.from_env()
 
     bot = Bot(
         config=config,

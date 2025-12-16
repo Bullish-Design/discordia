@@ -64,6 +64,7 @@ class LoggingHandler(Handler[LoggingConfig]):
 
     async def handle(self, ctx: MessageContext) -> str | None:
         level = getattr(logging, self.config.log_level, logging.INFO)
+        print(f"[LoggingHandler] Logging message at level {level}")
         logger.log(
             level,
             "Message in #%s from %s: %s",

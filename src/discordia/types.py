@@ -16,15 +16,21 @@ def validate_discord_id(v: int) -> int:
 
 
 def validate_channel_name(v: str) -> str:
-    """Validate Discord channel name format."""
+    """Validate Discord channel name format.
+
+    Discord allows lowercase alphanumeric with hyphens/underscores for regular channels,
+    but threads can have spaces and mixed case.
+    """
     if not v:
         raise ValueError("Channel name cannot be empty")
-    if not v.islower():
-        raise ValueError("Channel name must be lowercase")
-    if not v.replace("-", "").replace("_", "").isalnum():
-        raise ValueError("Channel name must be alphanumeric with - or _")
     if len(v) > 100:
         raise ValueError("Channel name max 100 characters")
+
+    # Allow alphanumeric, hyphens, underscores, and spaces (for threads)
+    allowed = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_ ")
+    if not all(c in allowed for c in v):
+        raise ValueError("Channel name must be alphanumeric with -, _, or spaces")
+
     return v
 
 

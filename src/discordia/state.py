@@ -64,11 +64,12 @@ class Category(StateEntity):
 
 
 class Channel(StateEntity):
-    """Discord text channel."""
+    """Discord text channel or thread."""
 
     name: ChannelName
     server_id: DiscordID
     category_id: DiscordID | None = None
+    parent_channel_id: DiscordID | None = None
     position: int = Field(default=0, ge=0)
     topic: str | None = Field(default=None, max_length=1024)
 
@@ -76,6 +77,11 @@ class Channel(StateEntity):
     @property
     def is_categorized(self) -> bool:
         return self.category_id is not None
+
+    @computed_field
+    @property
+    def is_thread(self) -> bool:
+        return self.parent_channel_id is not None
 
 
 class User(StateEntity):
@@ -94,6 +100,7 @@ class Message(StateEntity):
     channel_id: DiscordID
     timestamp: datetime
     edited_at: datetime | None = None
+    replied_to_id: DiscordID | None = None
 
     @model_validator(mode="before")
     @classmethod
@@ -114,6 +121,11 @@ class Message(StateEntity):
     @property
     def is_edited(self) -> bool:
         return self.edited_at is not None
+
+    @computed_field
+    @property
+    def is_reply(self) -> bool:
+        return self.replied_to_id is not None
 
 
 T = TypeVar("T", bound=StateEntity)

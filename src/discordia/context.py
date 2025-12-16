@@ -84,6 +84,40 @@ class MessageContext(BaseModel):
 
         return "<@" in self.content
 
+    @computed_field
+    @property
+    def is_in_thread(self) -> bool:
+        """Whether the message was sent in a thread."""
+
+        return self.channel.is_thread
+
+    @computed_field
+    @property
+    def is_reply(self) -> bool:
+        """Whether this message is a reply to another message."""
+
+        return "<reply:" in self.content or self._check_reply_in_store()
+
+    def _check_reply_in_store(self) -> bool:
+        """Check if message in store has replied_to_id set."""
+        # This is a fallback - we'll populate replied_to_id in bot.py
+        return False
+
+    async def get_parent_channel(self) -> Channel | None:
+        """Get the parent channel if this message is in a thread."""
+
+        if not self.is_in_thread or not self.channel.parent_channel_id:
+            return None
+        return await self.store.get_channel(self.channel.parent_channel_id)
+
+    async def get_replied_message(self) -> Message | None:
+        """Get the message this is replying to, if any."""
+
+        message = await self.store.get_message(self.message_id)
+        if message and message.replied_to_id:
+            return await self.store.get_message(message.replied_to_id)
+        return None
+
     async def get_history(self, limit: int = 20) -> list[Message]:
         """Retrieve recent message history for this channel."""
 
