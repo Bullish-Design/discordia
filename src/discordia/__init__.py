@@ -3,6 +3,7 @@ from __future__ import annotations
 
 """Discordia - Discord bot framework."""
 
+from discordia.bot import Bot
 from discordia.config import BotConfig
 from discordia.context import MessageContext
 from discordia.discovery import DiscoveryEngine
@@ -20,9 +21,10 @@ from discordia.registry import EntityRegistry
 from discordia.state import Category, Channel, MemoryState, Message, StateEntity, StateStore, User
 from discordia.types import ChannelName, DiscordID, DiscordToken, MessageContent, Username
 
-__version__ = "0.2.0"
+__version__ = "0.5.0"
 
 __all__ = [
+    "Bot",
     "DiscordiaError",
     "ConfigurationError",
     "StateError",
