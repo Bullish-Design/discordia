@@ -1,52 +1,57 @@
 # src/discordia/types.py
 from __future__ import annotations
 
+"""Type aliases with Pydantic validators."""
+
 from typing import Annotated
 
-from pydantic import Field, SecretStr, StringConstraints
+from pydantic import AfterValidator, SecretStr
 
-# Discord snowflake IDs are positive 64-bit integers
-DiscordSnowflake = Annotated[int, Field(gt=0, description="Discord snowflake ID")]
 
-# Channel names: lowercase, hyphens, no spaces, 1-100 chars
-ChannelName = Annotated[
-    str,
-    StringConstraints(pattern=r"^[a-z0-9-]{1,100}$"),
-    Field(description="Valid Discord channel name"),
-]
+def validate_discord_id(v: int) -> int:
+    """Validate Discord snowflake ID."""
+    if v <= 0 or v > 2**63 - 1:
+        raise ValueError(f"Invalid Discord ID: {v}")
+    return v
 
-# Category names: 1-100 chars, can contain spaces
-CategoryName = Annotated[
-    str,
-    StringConstraints(min_length=1, max_length=100),
-    Field(description="Discord category name"),
-]
 
-# Message content: max 2000 chars
-MessageContent = Annotated[
-    str,
-    StringConstraints(max_length=2000),
-    Field(description="Discord message content"),
-]
+def validate_channel_name(v: str) -> str:
+    """Validate Discord channel name format."""
+    if not v:
+        raise ValueError("Channel name cannot be empty")
+    if not v.islower():
+        raise ValueError("Channel name must be lowercase")
+    if not v.replace("-", "").replace("_", "").isalnum():
+        raise ValueError("Channel name must be alphanumeric with - or _")
+    if len(v) > 100:
+        raise ValueError("Channel name max 100 characters")
+    return v
 
-# Username: 2-32 chars
-Username = Annotated[
-    str,
-    StringConstraints(min_length=2, max_length=32),
-    Field(description="Discord username"),
-]
 
-# Secure credential storage
+def validate_username(v: str) -> str:
+    """Validate Discord username."""
+    if not 2 <= len(v) <= 32:
+        raise ValueError("Username must be 2-32 characters")
+    return v
+
+
+def validate_message_content(v: str) -> str:
+    """Validate message content length."""
+    if len(v) > 2000:
+        raise ValueError("Message content max 2000 characters")
+    return v
+
+
+DiscordID = Annotated[int, AfterValidator(validate_discord_id)]
+ChannelName = Annotated[str, AfterValidator(validate_channel_name)]
+Username = Annotated[str, AfterValidator(validate_username)]
+MessageContent = Annotated[str, AfterValidator(validate_message_content)]
 DiscordToken = SecretStr
-LlmApiKey = SecretStr
-
 
 __all__ = [
-    "DiscordSnowflake",
+    "DiscordID",
     "ChannelName",
-    "CategoryName",
-    "MessageContent",
     "Username",
+    "MessageContent",
     "DiscordToken",
-    "LlmApiKey",
 ]

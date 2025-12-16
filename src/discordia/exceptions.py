@@ -1,106 +1,48 @@
 # src/discordia/exceptions.py
 from __future__ import annotations
 
-
-def _default_message_for(exc_type: type[BaseException]) -> str:
-    """Derive a default message from an exception type."""
-    name = exc_type.__name__
-    spaced = "".join((" " + c if c.isupper() and i > 0 else c) for i, c in enumerate(name)).strip()
-    return spaced
+"""Custom exceptions for Discordia."""
 
 
 class DiscordiaError(Exception):
     """Base exception for all Discordia errors."""
 
-    message: str
-    cause: Exception | None
-
-    def __init__(self, message: str | None = None, cause: Exception | None = None) -> None:
-        self.message = message if message is not None else _default_message_for(type(self))
+    def __init__(self, message: str, cause: Exception | None = None):
+        self.message = message
         self.cause = cause
-        super().__init__(self.message)
+        super().__init__(message)
 
     def __str__(self) -> str:
-        if self.cause is not None:
+        if self.cause:
             return f"{self.message} (caused by: {self.cause})"
         return self.message
 
 
 class ConfigurationError(DiscordiaError):
-    """Raised when configuration or settings are invalid or missing."""
-
-
-class DiscordAPIError(DiscordiaError):
-    """Raised when a Discord API operation fails."""
-
-
-class ChannelNotFoundError(DiscordAPIError):
-    """Raised when a requested channel cannot be found."""
-
-
-class CategoryNotFoundError(DiscordAPIError):
-    """Raised when a requested category cannot be found."""
-
-
-class MessageSendError(DiscordAPIError):
-    """Raised when sending a message to Discord fails."""
-
-
-class PersistenceError(DiscordiaError):
-    """Raised when persistence operations fail."""
-
-
-class DatabaseError(PersistenceError):
-    """Raised when database operations fail."""
-
-
-class JSONLError(PersistenceError):
-    """Raised when JSONL read/write operations fail."""
-
-
-class LLMError(DiscordiaError):
-    """Raised when an LLM provider operation fails."""
-
-
-class LLMAPIError(LLMError):
-    """Raised when an LLM API call fails."""
-
-
-class ContextTooLargeError(LLMError):
-    """Raised when LLM context exceeds model limits."""
-
-
-class TemplateError(DiscordiaError):
-    """Raised when template validation or processing fails."""
-
-
-class ReconciliationError(DiscordiaError):
-    """Raised when template reconciliation to Discord fails."""
+    """Invalid configuration."""
 
 
 class StateError(DiscordiaError):
-    """Raised when state management operations fail."""
+    """State management error."""
 
 
-class HandlerError(DiscordiaError):
-    """Raised when message handler execution fails."""
+class DiscordAPIError(DiscordiaError):
+    """Discord API operation failed."""
+
+
+class EntityNotFoundError(StateError):
+    """Entity not found in state."""
+
+
+class ValidationError(DiscordiaError):
+    """Validation failed."""
 
 
 __all__ = [
     "DiscordiaError",
     "ConfigurationError",
-    "DiscordAPIError",
-    "ChannelNotFoundError",
-    "CategoryNotFoundError",
-    "MessageSendError",
-    "PersistenceError",
-    "DatabaseError",
-    "JSONLError",
-    "LLMError",
-    "LLMAPIError",
-    "ContextTooLargeError",
-    "TemplateError",
-    "ReconciliationError",
     "StateError",
-    "HandlerError",
+    "DiscordAPIError",
+    "EntityNotFoundError",
+    "ValidationError",
 ]

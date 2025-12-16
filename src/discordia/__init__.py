@@ -1,75 +1,56 @@
 # src/discordia/__init__.py
 from __future__ import annotations
 
-from discordia.engine import Bot
+"""Discordia - Discord bot framework."""
+
+from discordia.bot import Bot
+from discordia.config import BotConfig
+from discordia.context import MessageContext
+from discordia.discovery import DiscoveryEngine
 from discordia.exceptions import (
-    CategoryNotFoundError,
-    ChannelNotFoundError,
     ConfigurationError,
-    ContextTooLargeError,
-    DatabaseError,
     DiscordAPIError,
     DiscordiaError,
-    HandlerError,
-    JSONLError,
-    LLMAPIError,
-    LLMError,
-    MessageSendError,
-    PersistenceError,
-    ReconciliationError,
+    EntityNotFoundError,
     StateError,
-    TemplateError,
+    ValidationError,
 )
-from discordia.settings import Settings
-from discordia.templates import (
-    AnnouncementChannelTemplate,
-    CategoryTemplate,
-    ChannelPattern,
-    ChannelTemplate,
-    ChannelType,
-    DailyLogPattern,
-    ForumChannelTemplate,
-    PrefixedPattern,
-    ServerTemplate,
-    TemplateModel,
-    TextChannelTemplate,
-    VoiceChannelTemplate,
-    WeekDayPattern,
-)
+from discordia.handlers import EchoConfig, EchoHandler, Handler, LoggingConfig, LoggingHandler
+from discordia.plugins import Plugin
+from discordia.registry import EntityRegistry
+from discordia.state import Category, Channel, MemoryState, Message, StateEntity, StateStore, User
+from discordia.types import ChannelName, DiscordID, DiscordToken, MessageContent, Username
 
-__version__ = "0.2.0"
+__version__ = "0.5.0"
 
 __all__ = [
-    "AnnouncementChannelTemplate",
     "Bot",
-    "CategoryNotFoundError",
-    "CategoryTemplate",
-    "ChannelNotFoundError",
-    "ChannelPattern",
-    "ChannelTemplate",
-    "ChannelType",
-    "ConfigurationError",
-    "ContextTooLargeError",
-    "DailyLogPattern",
-    "DatabaseError",
-    "DiscordAPIError",
     "DiscordiaError",
-    "ForumChannelTemplate",
-    "HandlerError",
-    "JSONLError",
-    "LLMAPIError",
-    "LLMError",
-    "MessageSendError",
-    "PersistenceError",
-    "PrefixedPattern",
-    "ReconciliationError",
-    "ServerTemplate",
-    "Settings",
+    "ConfigurationError",
     "StateError",
-    "TemplateError",
-    "TemplateModel",
-    "TextChannelTemplate",
-    "VoiceChannelTemplate",
-    "WeekDayPattern",
+    "DiscordAPIError",
+    "EntityNotFoundError",
+    "ValidationError",
+    "MessageContext",
+    "BotConfig",
+    "DiscoveryEngine",
+    "EntityRegistry",
+    "Plugin",
+    "Handler",
+    "LoggingHandler",
+    "LoggingConfig",
+    "EchoHandler",
+    "EchoConfig",
+    "DiscordID",
+    "ChannelName",
+    "Username",
+    "MessageContent",
+    "DiscordToken",
+    "StateEntity",
+    "Category",
+    "Channel",
+    "User",
+    "Message",
+    "StateStore",
+    "MemoryState",
 ]
-
