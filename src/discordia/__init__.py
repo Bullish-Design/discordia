@@ -3,7 +3,9 @@ from __future__ import annotations
 
 """Discordia - Discord bot framework."""
 
+from discordia.config import BotConfig
 from discordia.context import MessageContext
+from discordia.discovery import DiscoveryEngine
 from discordia.exceptions import (
     ConfigurationError,
     DiscordAPIError,
@@ -13,11 +15,12 @@ from discordia.exceptions import (
     ValidationError,
 )
 from discordia.handlers import EchoConfig, EchoHandler, Handler, LoggingConfig, LoggingHandler
+from discordia.plugins import Plugin
 from discordia.registry import EntityRegistry
 from discordia.state import Category, Channel, MemoryState, Message, StateEntity, StateStore, User
 from discordia.types import ChannelName, DiscordID, DiscordToken, MessageContent, Username
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     "DiscordiaError",
@@ -27,7 +30,10 @@ __all__ = [
     "EntityNotFoundError",
     "ValidationError",
     "MessageContext",
+    "BotConfig",
+    "DiscoveryEngine",
     "EntityRegistry",
+    "Plugin",
     "Handler",
     "LoggingHandler",
     "LoggingConfig",
