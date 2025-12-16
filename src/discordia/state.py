@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import UTC, datetime
-from typing import Any, Protocol, Self, TypeVar
+from typing import Any, Protocol, Self, TypeVar, runtime_checkable
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 
@@ -119,6 +119,7 @@ class Message(StateEntity):
 T = TypeVar("T", bound=StateEntity)
 
 
+@runtime_checkable
 class StateStore(Protocol):
     """Protocol for state storage backends."""
 
